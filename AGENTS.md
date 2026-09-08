@@ -16,7 +16,9 @@ Run the full quality gate before committing:
 bun run check
 ```
 
-## UI stack
+## Typography
+
+Geist Variable for UI/display, Geist Mono for paths and meta (same loading approach as lukebrannagan-3).
 
 - **Design system:** Lit web components under `src/design-system/`
 - **App screens:** Alpine.js + HTML (`index.html`, `src/app/`) — keep app JS thin
