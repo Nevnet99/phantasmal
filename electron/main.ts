@@ -17,6 +17,8 @@ function createWindow() {
 	const win = new BrowserWindow({
 		width: 1100,
 		height: 720,
+		minWidth: 900,
+		minHeight: 600,
 		title: "Phantasmal",
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),

@@ -1,15 +1,23 @@
 import type { VaultStatus } from "@/shared/vault";
+import { NAV_ITEMS, navItemById, type AppRoute, type NavItem } from "./nav";
 
 export type AppScreen = "loading" | "welcome" | "setup" | "app";
 
 type PhantasmalApp = {
 	screen: AppScreen;
+	route: AppRoute;
 	status: VaultStatus | null;
 	busy: boolean;
+	navItems: NavItem[];
 	get isLoading(): boolean;
 	get isWelcome(): boolean;
 	get isSetup(): boolean;
 	get isApp(): boolean;
+	get isHome(): boolean;
+	get isVault(): boolean;
+	get isStub(): boolean;
+	get currentLabel(): string;
+	get currentBlurb(): string;
 	get defaultPathLabel(): string;
 	get readyLabel(): string;
 	get errorLabel(): string;
@@ -20,6 +28,8 @@ type PhantasmalApp = {
 	startSetup(): void;
 	setupLocally(): Promise<void>;
 	enterApp(): void;
+	goTo(id: AppRoute): void;
+	isActive(id: AppRoute): boolean;
 	chooseFolder(): Promise<void>;
 	openExisting(): Promise<void>;
 	reveal(): Promise<void>;
@@ -40,8 +50,10 @@ function unavailableStatus(): VaultStatus {
 export function phantasmalApp(): PhantasmalApp {
 	return {
 		screen: "loading",
+		route: "home",
 		status: null,
 		busy: false,
+		navItems: NAV_ITEMS,
 
 		get isLoading() {
 			return this.screen === "loading";
@@ -57,6 +69,27 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get isApp() {
 			return this.screen === "app";
+		},
+
+		get isHome() {
+			return this.route === "home";
+		},
+
+		get isVault() {
+			return this.route === "vault";
+		},
+
+		get isStub() {
+			const item = navItemById(this.route);
+			return Boolean(item && !item.enabled);
+		},
+
+		get currentLabel() {
+			return navItemById(this.route)?.label ?? "Phantasmal";
+		},
+
+		get currentBlurb() {
+			return navItemById(this.route)?.blurb ?? "";
 		},
 
 		get defaultPathLabel() {
@@ -93,6 +126,7 @@ export function phantasmalApp(): PhantasmalApp {
 
 			this.status = await api.getStatus();
 			this.screen = this.status.open ? "app" : "welcome";
+			this.route = "home";
 		},
 
 		startSetup() {
@@ -107,6 +141,7 @@ export function phantasmalApp(): PhantasmalApp {
 				this.status = await api.useDefaultLocation();
 				if (this.status.open) {
 					this.screen = "app";
+					this.route = "home";
 				}
 			} finally {
 				this.busy = false;
@@ -116,7 +151,17 @@ export function phantasmalApp(): PhantasmalApp {
 		enterApp() {
 			if (this.status?.open) {
 				this.screen = "app";
+				this.route = "home";
 			}
+		},
+
+		goTo(id) {
+			if (!navItemById(id)) return;
+			this.route = id;
+		},
+
+		isActive(id) {
+			return this.route === id;
 		},
 
 		async run(action) {
