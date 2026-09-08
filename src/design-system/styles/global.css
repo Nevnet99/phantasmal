@@ -1,5 +1,6 @@
 @import "./fonts.css";
 @import "./buttons.css";
+@import "./toggle.css";
 
 :root {
 	--font-display: "Geist Variable", "Geist Fallback", system-ui, sans-serif;

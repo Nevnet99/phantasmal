@@ -21,6 +21,12 @@
 	background: color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
+.ds-btn--danger {
+	border-color: color-mix(in srgb, var(--color-danger) 55%, var(--color-line));
+	background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+	color: var(--color-danger);
+}
+
 .ds-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;

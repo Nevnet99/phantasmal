@@ -6,6 +6,7 @@ import {
 	configFilePath,
 	defaultVaultPath,
 	readConfig,
+	setDailyReminder,
 	setUiDensity,
 	setUiTheme,
 	setVaultPath,
@@ -27,11 +28,13 @@ function tempDir(): string {
 }
 
 describe("config", () => {
-	it("defaults vaultPath, compact density, and dark theme when missing", () => {
+	it("defaults vaultPath, compact density, dark theme, and reminders when missing", () => {
 		expect(readConfig(tempDir())).toEqual({
 			vaultPath: null,
 			uiDensity: "compact",
 			uiTheme: "dark",
+			dailyReminder: true,
+			lastReminderDay: null,
 		});
 	});
 
@@ -39,6 +42,7 @@ describe("config", () => {
 		const userData = tempDir();
 		setUiDensity(userData, "roomy");
 		setUiTheme(userData, "light");
+		setDailyReminder(userData, false);
 		const vaultPath = "/home/luke/Google Drive/Phantasmal";
 		setVaultPath(userData, vaultPath);
 
@@ -47,6 +51,8 @@ describe("config", () => {
 			vaultPath,
 			uiDensity: "roomy",
 			uiTheme: "light",
+			dailyReminder: false,
+			lastReminderDay: null,
 		});
 	});
 
@@ -62,6 +68,12 @@ describe("config", () => {
 		expect(readConfig(userData).uiTheme).toBe("system");
 	});
 
+	it("persists daily reminder preference", () => {
+		const userData = tempDir();
+		setDailyReminder(userData, false);
+		expect(readConfig(userData).dailyReminder).toBe(false);
+	});
+
 	it("builds the Documents/Phantasmal default folder", () => {
 		expect(defaultVaultPath("/home/luke/Documents")).toBe(
 			path.join("/home/luke/Documents", "Phantasmal"),
@@ -70,12 +82,20 @@ describe("config", () => {
 
 	it("recovers from corrupt config JSON", () => {
 		const userData = tempDir();
-		writeConfig(userData, { vaultPath: null, uiDensity: "compact", uiTheme: "dark" });
+		writeConfig(userData, {
+			vaultPath: null,
+			uiDensity: "compact",
+			uiTheme: "dark",
+			dailyReminder: true,
+			lastReminderDay: null,
+		});
 		fs.writeFileSync(configFilePath(userData), "{not-json", "utf8");
 		expect(readConfig(userData)).toEqual({
 			vaultPath: null,
 			uiDensity: "compact",
 			uiTheme: "dark",
+			dailyReminder: true,
+			lastReminderDay: null,
 		});
 	});
 });

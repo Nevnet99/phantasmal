@@ -1,13 +1,34 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
-import { defaultVaultPath, readConfig, setUiDensity, setUiTheme, setVaultPath } from "./config";
+import {
+	defaultVaultPath,
+	readConfig,
+	setDailyReminder,
+	setUiDensity,
+	setUiTheme,
+	setVaultPath,
+} from "./config";
 import { closeVault, getOpenVault, looksLikeVault, openVaultAt } from "./vault/fs-vault";
 import {
+	archiveHabit,
+	createHabit,
+	getTrackSnapshot,
+	listArchivedHabits,
+	listHabits,
+	removeHabit,
+	restoreHabit,
+	toggleHabitDay,
+	updateHabit,
+} from "./vault/habits";
+import { syncDueTodayReminder } from "./reminders";
+import {
+	REMINDER_CHANNELS,
 	SETTINGS_CHANNELS,
 	isUiDensity,
 	isUiTheme,
 	type AppPrefs,
 	type UiTheme,
 } from "../src/shared/prefs";
+import { HABIT_CHANNELS, isDayKey, isTrackQuery, type HabitDraft } from "../src/shared/habits";
 import { VAULT_CHANNELS, type VaultStatus } from "../src/shared/vault";
 
 type Paths = {
@@ -21,7 +42,11 @@ function applyNativeTheme(theme: UiTheme): void {
 
 function prefsFromConfig(userDataDir: string): AppPrefs {
 	const config = readConfig(userDataDir);
-	return { uiDensity: config.uiDensity, uiTheme: config.uiTheme };
+	return {
+		uiDensity: config.uiDensity,
+		uiTheme: config.uiTheme,
+		dailyReminder: config.dailyReminder,
+	};
 }
 
 export function syncNativeThemeFromConfig(userDataDir: string): void {
@@ -189,5 +214,105 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		const config = setUiTheme(getPaths().userData, theme);
 		applyNativeTheme(config.uiTheme);
 		return prefsFromConfig(getPaths().userData);
+	});
+
+	ipcMain.handle(SETTINGS_CHANNELS.setDailyReminder, (_event, enabled: unknown) => {
+		if (typeof enabled !== "boolean") {
+			return prefsFromConfig(getPaths().userData);
+		}
+		setDailyReminder(getPaths().userData, enabled);
+		return prefsFromConfig(getPaths().userData);
+	});
+
+	ipcMain.handle(REMINDER_CHANNELS.syncDueToday, (_event, remaining: unknown, today: unknown) => {
+		if (typeof remaining !== "number" || !isDayKey(today)) {
+			return;
+		}
+		syncDueTodayReminder(getPaths().userData, remaining, today);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.list, (_event, today: unknown) => {
+		if (!isDayKey(today)) {
+			throw new Error("Invalid day.");
+		}
+		return listHabits(today);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.listArchived, () => listArchivedHabits());
+
+	ipcMain.handle(HABIT_CHANNELS.getTrack, (_event, query: unknown) => {
+		if (!isTrackQuery(query)) {
+			throw new Error("Invalid track query.");
+		}
+		return getTrackSnapshot(query);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.create, (_event, draft: unknown, today: unknown) => {
+		if (!isDayKey(today) || !draft || typeof draft !== "object") {
+			throw new Error("Invalid habit draft.");
+		}
+		const record = draft as HabitDraft;
+		if (typeof record.name !== "string") {
+			throw new Error("Invalid habit draft.");
+		}
+		return createHabit(
+			{
+				name: record.name,
+				cue: typeof record.cue === "string" ? record.cue : "",
+				note: typeof record.note === "string" ? record.note : "",
+				schedule: record.schedule,
+				stackAfterId: record.stackAfterId,
+			},
+			today,
+		);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.update, (_event, id: unknown, draft: unknown, today: unknown) => {
+		if (typeof id !== "string" || !isDayKey(today) || !draft || typeof draft !== "object") {
+			throw new Error("Invalid habit update.");
+		}
+		const record = draft as HabitDraft;
+		if (typeof record.name !== "string") {
+			throw new Error("Invalid habit update.");
+		}
+		return updateHabit(
+			id,
+			{
+				name: record.name,
+				cue: typeof record.cue === "string" ? record.cue : "",
+				note: typeof record.note === "string" ? record.note : "",
+				schedule: record.schedule,
+				stackAfterId: record.stackAfterId,
+			},
+			today,
+		);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.toggleDay, (_event, id: unknown, today: unknown) => {
+		if (typeof id !== "string" || !isDayKey(today)) {
+			throw new Error("Invalid toggle request.");
+		}
+		return toggleHabitDay(id, today);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.archive, (_event, id: unknown, note: unknown, today: unknown) => {
+		if (typeof id !== "string" || typeof note !== "string" || !isDayKey(today)) {
+			throw new Error("Invalid archive request.");
+		}
+		return archiveHabit(id, note, today);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.restore, (_event, id: unknown, today: unknown) => {
+		if (typeof id !== "string" || !isDayKey(today)) {
+			throw new Error("Invalid restore request.");
+		}
+		return restoreHabit(id, today);
+	});
+
+	ipcMain.handle(HABIT_CHANNELS.remove, (_event, id: unknown) => {
+		if (typeof id !== "string") {
+			throw new Error("Invalid remove request.");
+		}
+		removeHabit(id);
 	});
 }
