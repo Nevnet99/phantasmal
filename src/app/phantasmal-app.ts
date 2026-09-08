@@ -8,6 +8,7 @@ type PhantasmalApp = {
 	busy: boolean;
 	init(): Promise<void>;
 	startSetup(): void;
+	setupLocally(): Promise<void>;
 	enterApp(): void;
 	chooseFolder(): Promise<void>;
 	openExisting(): Promise<void>;
@@ -47,6 +48,20 @@ export function phantasmalApp(): PhantasmalApp {
 
 		startSetup() {
 			this.screen = "setup";
+		},
+
+		async setupLocally() {
+			const api = window.phantasmal?.vault;
+			if (!api) return;
+			this.busy = true;
+			try {
+				this.status = await api.useDefaultLocation();
+				if (this.status.open) {
+					this.screen = "app";
+				}
+			} finally {
+				this.busy = false;
+			}
 		},
 
 		enterApp() {
