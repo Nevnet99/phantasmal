@@ -2,8 +2,7 @@ import "@/design-system/styles/global.css";
 import "@/styles/app.css";
 import "@ds";
 import Alpine from "alpinejs";
-import { vaultSetup } from "./app/vault-setup";
+import { phantasmalApp } from "./app/phantasmal-app";
 
-Alpine.data("vaultSetup", vaultSetup);
-
+Alpine.data("phantasmalApp", phantasmalApp);
 Alpine.start();

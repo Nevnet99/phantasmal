@@ -21,6 +21,7 @@ bun run check
 - **Design system:** Lit web components under `src/design-system/`
 - **App screens:** Alpine.js + HTML (`index.html`, `src/app/`) — keep app JS thin
 - Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
+- First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app`.
 
 ## Data vault
 

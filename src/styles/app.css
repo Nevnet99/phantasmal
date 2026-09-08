@@ -1,51 +1,68 @@
-.shell {
+[x-cloak] {
+	display: none !important;
+}
+
+.app {
 	min-height: 100vh;
-	display: grid;
-	grid-template-rows: auto 1fr;
-	padding: var(--space-xl);
-	box-sizing: border-box;
 	color: var(--color-ink);
 	background: var(--color-ground);
 	font-family: var(--font-body);
 }
 
-.shell__header {
-	display: grid;
-	gap: var(--space-xs);
-	margin-bottom: var(--space-xl);
+.app__loading {
+	margin: 0;
+	padding: var(--space-xl);
+	color: var(--color-muted);
+	font-size: var(--text-caption);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
 }
 
-.shell__title {
+.welcome {
+	min-height: 100vh;
+	display: grid;
+	align-content: center;
+	gap: var(--space-md);
+	padding: var(--space-xl);
+	box-sizing: border-box;
+	max-width: 36rem;
+}
+
+.welcome__brand {
 	margin: 0;
 	font-family: var(--font-display);
 	font-size: var(--text-display);
 	font-weight: 600;
 	letter-spacing: -0.02em;
-	line-height: 1.1;
+	line-height: 1.05;
 }
 
-.shell__lede {
+.welcome__title {
 	margin: 0;
-	max-width: 36rem;
+	font-family: var(--font-body);
+	font-size: 1.25rem;
+	font-weight: 500;
+	color: var(--color-muted);
+}
+
+.welcome__lede {
+	margin: 0 0 var(--space-sm);
 	color: var(--color-muted);
 	font-size: var(--text-body);
 	line-height: 1.5;
 }
 
-.shell__stage {
-	border: 1px solid var(--color-line);
-	border-radius: var(--radius-md);
-	min-height: 18rem;
-	padding: var(--space-lg);
-	background: color-mix(in srgb, var(--color-ground) 88%, var(--color-ink));
-}
-
-.vault-setup {
+.setup {
+	min-height: 100vh;
 	display: grid;
+	align-content: center;
 	gap: var(--space-md);
+	padding: var(--space-xl);
+	box-sizing: border-box;
+	max-width: 40rem;
 }
 
-.vault-setup__eyebrow {
+.setup__step {
 	margin: 0;
 	font-size: var(--text-caption);
 	text-transform: uppercase;
@@ -53,23 +70,23 @@
 	color: var(--color-muted);
 }
 
-.vault-setup__title {
+.setup__title {
 	margin: 0;
 	font-family: var(--font-display);
-	font-size: 1.5rem;
+	font-size: clamp(1.75rem, 4vw, 2.5rem);
 	font-weight: 600;
 	letter-spacing: -0.02em;
+	line-height: 1.15;
 }
 
-.vault-setup__lead {
+.setup__lede {
 	margin: 0;
-	max-width: 36rem;
 	color: var(--color-muted);
 	font-size: 1rem;
 	line-height: 1.5;
 }
 
-.vault-setup__path {
+.setup__path {
 	margin: 0;
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--color-line);
@@ -80,24 +97,77 @@
 	background: color-mix(in srgb, var(--color-ground) 92%, var(--color-ink));
 }
 
-.vault-setup__actions {
+.setup__actions,
+.setup__footer {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-sm);
 }
 
-.vault-setup__ok {
+.setup__footer {
+	margin-top: var(--space-sm);
+}
+
+.setup__ok {
 	margin: 0;
 	color: var(--color-accent);
 	font-size: 0.95rem;
 }
 
-.vault-setup__error {
+.setup__error {
 	margin: 0;
 	color: #e8a090;
 	font-size: 0.95rem;
 }
 
-[x-cloak] {
-	display: none !important;
+.workspace {
+	min-height: 100vh;
+	display: grid;
+	grid-template-rows: auto 1fr;
+	padding: var(--space-xl);
+	box-sizing: border-box;
+}
+
+.workspace__header {
+	display: grid;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-xl);
+}
+
+.workspace__brand {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: 1.5rem;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+.workspace__path {
+	margin: 0;
+	color: var(--color-muted);
+	font-family: ui-monospace, "Cascadia Code", monospace;
+	font-size: 0.8rem;
+	word-break: break-all;
+}
+
+.workspace__body {
+	display: grid;
+	align-content: start;
+	gap: var(--space-md);
+	max-width: 36rem;
+}
+
+.workspace__title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: clamp(1.75rem, 4vw, 2.25rem);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+.workspace__lede {
+	margin: 0;
+	color: var(--color-muted);
+	font-size: var(--text-body);
+	line-height: 1.5;
 }

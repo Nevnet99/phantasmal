@@ -10,45 +10,45 @@
 		<title>Phantasmal</title>
 	</head>
 	<body>
-		<div class="shell">
-			<header class="shell__header">
-				<h1 class="shell__title">Phantasmal</h1>
-				<p class="shell__lede">An Atomic Habits workspace for systems, streaks, and reflection.</p>
-			</header>
+		<div class="app" x-data="phantasmalApp" x-init="init()" x-cloak>
+			<template x-if="screen === 'loading'">
+				<p class="app__loading">Starting…</p>
+			</template>
 
-			<section
-				class="shell__stage"
-				aria-label="Workspace"
-				x-data="vaultSetup"
-				x-init="init()"
-				x-cloak
-			>
-				<p class="vault-setup__eyebrow" x-show="!status">Loading vault…</p>
-
-				<div class="vault-setup" x-show="status" x-cloak>
-					<p class="vault-setup__eyebrow">Data vault</p>
-					<h2
-						class="vault-setup__title"
-						x-text="status.open ? 'Vault connected' : 'Choose where habits live'"
-					></h2>
-					<p class="vault-setup__lead">
-						Your vault is a folder of files—same idea as Obsidian. Put it in Google Drive or Dropbox
-						and edit from either machine; each habit and journal entry will be its own file so sync
-						stays safe.
+			<template x-if="screen === 'welcome'">
+				<section class="welcome" aria-label="Welcome">
+					<p class="welcome__brand">Phantasmal</p>
+					<h1 class="welcome__title">Welcome</h1>
+					<p class="welcome__lede">
+						Build systems for the person you want to become—habits, breaks, and a journal in one
+						place.
 					</p>
-					<p
-						class="vault-setup__path"
-						title="Vault folder"
-						x-text="status.path ?? status.defaultPath"
-					></p>
-					<p
-						class="vault-setup__ok"
-						x-show="status.open && status.schemaVersion !== null"
-						x-text="'Open · vault format v' + status.schemaVersion"
-					></p>
-					<p class="vault-setup__error" x-show="status.error" x-text="status.error"></p>
+					<ds-button variant="primary" @click="startSetup()">Get set up</ds-button>
+				</section>
+			</template>
 
-					<div class="vault-setup__actions">
+			<template x-if="screen === 'setup'">
+				<section class="setup" aria-label="Setup">
+					<p class="setup__step">Step 1 of 1</p>
+					<h1 class="setup__title">Where should your vault live?</h1>
+					<p class="setup__lede">
+						Pick a folder for your habit files. Use Google Drive or Dropbox if you want the same
+						vault on more than one machine.
+					</p>
+
+					<p
+						class="setup__path"
+						title="Vault folder"
+						x-text="status?.path ?? status?.defaultPath ?? ''"
+					></p>
+					<p
+						class="setup__ok"
+						x-show="status?.open && status?.schemaVersion !== null"
+						x-text="'Ready · vault format v' + status.schemaVersion"
+					></p>
+					<p class="setup__error" x-show="status?.error" x-text="status.error"></p>
+
+					<div class="setup__actions">
 						<ds-button variant="primary" x-bind:disabled="busy" @click="chooseFolder()">
 							Choose folder…
 						</ds-button>
@@ -58,12 +58,34 @@
 						<ds-button x-bind:disabled="busy" @click="useDefault()">
 							Use Documents/Phantasmal
 						</ds-button>
-						<ds-button x-show="status.configured" x-bind:disabled="busy" @click="reveal()">
-							Open folder
-						</ds-button>
 					</div>
-				</div>
-			</section>
+
+					<div class="setup__footer" x-show="status?.open">
+						<ds-button variant="primary" @click="enterApp()">Continue to Phantasmal</ds-button>
+					</div>
+				</section>
+			</template>
+
+			<template x-if="screen === 'app'">
+				<section class="workspace" aria-label="Workspace">
+					<header class="workspace__header">
+						<p class="workspace__brand">Phantasmal</p>
+						<p
+							class="workspace__path"
+							x-show="status?.path"
+							x-text="status.path"
+							title="Vault folder"
+						></p>
+					</header>
+					<div class="workspace__body">
+						<h1 class="workspace__title">You're set up</h1>
+						<p class="workspace__lede">
+							Your vault is ready. Habit tracking, creation, and journaling land here next.
+						</p>
+						<ds-button @click="reveal()">Open vault folder</ds-button>
+					</div>
+				</section>
+			</template>
 		</div>
 
 		<script type="module" src="/src/main.ts"></script>

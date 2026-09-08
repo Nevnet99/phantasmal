@@ -1,9 +1,14 @@
 import type { VaultStatus } from "@/shared/vault";
 
-type VaultSetupData = {
+export type AppScreen = "loading" | "welcome" | "setup" | "app";
+
+type PhantasmalApp = {
+	screen: AppScreen;
 	status: VaultStatus | null;
 	busy: boolean;
 	init(): Promise<void>;
+	startSetup(): void;
+	enterApp(): void;
 	chooseFolder(): Promise<void>;
 	openExisting(): Promise<void>;
 	useDefault(): Promise<void>;
@@ -11,26 +16,43 @@ type VaultSetupData = {
 	run(action: () => Promise<VaultStatus>): Promise<void>;
 };
 
-export function vaultSetup(): VaultSetupData {
+function unavailableStatus(): VaultStatus {
 	return {
+		configured: false,
+		path: null,
+		open: false,
+		schemaVersion: null,
+		defaultPath: "(unavailable outside Electron)",
+		error: "Vault API is only available in the Electron app.",
+	};
+}
+
+export function phantasmalApp(): PhantasmalApp {
+	return {
+		screen: "loading",
 		status: null,
 		busy: false,
 
 		async init() {
 			const api = window.phantasmal?.vault;
 			if (!api) {
-				this.status = {
-					configured: false,
-					path: null,
-					open: false,
-					schemaVersion: null,
-					defaultPath: "(unavailable outside Electron)",
-					error: "Vault API is only available in the Electron app.",
-				};
+				this.status = unavailableStatus();
+				this.screen = "welcome";
 				return;
 			}
 
 			this.status = await api.getStatus();
+			this.screen = this.status.open ? "app" : "welcome";
+		},
+
+		startSetup() {
+			this.screen = "setup";
+		},
+
+		enterApp() {
+			if (this.status?.open) {
+				this.screen = "app";
+			}
 		},
 
 		async run(action) {
