@@ -23,18 +23,18 @@ describe("config", () => {
 		expect(readConfig(tempDir())).toEqual({ vaultPath: null });
 	});
 
-	it("persists vault path for a machine-local pointer into cloud storage", () => {
+	it("persists a vault folder path for cloud-synced storage", () => {
 		const userData = tempDir();
-		const vaultPath = "/home/luke/Google Drive/Phantasmal/phantasmal.db";
+		const vaultPath = "/home/luke/Google Drive/Phantasmal";
 		setVaultPath(userData, vaultPath);
 
 		expect(fs.existsSync(configFilePath(userData))).toBe(true);
 		expect(readConfig(userData)).toEqual({ vaultPath });
 	});
 
-	it("builds the Documents/Phantasmal default path", () => {
+	it("builds the Documents/Phantasmal default folder", () => {
 		expect(defaultVaultPath("/home/luke/Documents")).toBe(
-			path.join("/home/luke/Documents", "Phantasmal", "phantasmal.db"),
+			path.join("/home/luke/Documents", "Phantasmal"),
 		);
 	});
 

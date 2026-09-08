@@ -3,7 +3,7 @@
 export const VAULT_CHANNELS = {
 	getStatus: "vault:getStatus",
 	chooseFolder: "vault:chooseFolder",
-	openDatabaseFile: "vault:openDatabaseFile",
+	openExistingVault: "vault:openExistingVault",
 	useDefaultLocation: "vault:useDefaultLocation",
 	revealInFolder: "vault:revealInFolder",
 } as const;
@@ -20,7 +20,7 @@ export type VaultStatus = {
 export type VaultApi = {
 	getStatus: () => Promise<VaultStatus>;
 	chooseFolder: () => Promise<VaultStatus>;
-	openDatabaseFile: () => Promise<VaultStatus>;
+	openExistingVault: () => Promise<VaultStatus>;
 	useDefaultLocation: () => Promise<VaultStatus>;
 	revealInFolder: () => Promise<boolean>;
 };

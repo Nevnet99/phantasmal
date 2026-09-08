@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 export type AppConfig = {
-	/** Absolute path to the SQLite database file. */
+	/** Absolute path to the vault folder (may live in Drive/Dropbox). */
 	vaultPath: string | null;
 };
 
@@ -11,7 +11,7 @@ const DEFAULT_CONFIG: AppConfig = {
 };
 
 export function defaultVaultPath(documentsDir: string): string {
-	return path.join(documentsDir, "Phantasmal", "phantasmal.db");
+	return path.join(documentsDir, "Phantasmal");
 }
 
 export function configFilePath(userDataDir: string): string {

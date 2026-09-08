@@ -4,8 +4,8 @@ import { VAULT_CHANNELS, type VaultApi, type VaultStatus } from "../src/shared/v
 const vault: VaultApi = {
 	getStatus: () => ipcRenderer.invoke(VAULT_CHANNELS.getStatus) as Promise<VaultStatus>,
 	chooseFolder: () => ipcRenderer.invoke(VAULT_CHANNELS.chooseFolder) as Promise<VaultStatus>,
-	openDatabaseFile: () =>
-		ipcRenderer.invoke(VAULT_CHANNELS.openDatabaseFile) as Promise<VaultStatus>,
+	openExistingVault: () =>
+		ipcRenderer.invoke(VAULT_CHANNELS.openExistingVault) as Promise<VaultStatus>,
 	useDefaultLocation: () =>
 		ipcRenderer.invoke(VAULT_CHANNELS.useDefaultLocation) as Promise<VaultStatus>,
 	revealInFolder: () => ipcRenderer.invoke(VAULT_CHANNELS.revealInFolder) as Promise<boolean>,

@@ -18,12 +18,19 @@ bun run check
 
 ## Data vault
 
-The SQLite database path is chosen in the app UI and stored in Electron
-`userData/config.json` (per machine). Point both machines at the same
-`phantasmal.db` inside a synced folder (Google Drive, Dropbox, etc.).
+The vault is a folder of files (Obsidian-style), not a SQLite database:
 
-Only one machine should write at a time while the cloud client is syncing.
+```
+Vault/
+  phantasmal.json
+  habits/
+  journal/
+```
 
+Choose the folder in the UI. Point both machines at the same synced folder
+(Google Drive, Dropbox, etc.). Each machine only stores that path in
+`userData/config.json`. Habits and journal entries will be separate files so
+cloud sync can merge edits from either machine.
 
 ## Documentation
 

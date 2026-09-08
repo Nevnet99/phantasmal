@@ -1,6 +1,6 @@
 # Phantasmal
 
-Local-first Atomic Habits workspace (Electron + Lit). Track habits, design systems for change, break bad habits, and journal — with SQLite on disk and optional export later.
+Local-first Atomic Habits workspace (Electron + Lit). Track habits, design systems for change, break bad habits, and journal — with an Obsidian-style file vault you can sync via Google Drive or Dropbox.
 
 ## Requirements
 
@@ -20,10 +20,26 @@ Local-first Atomic Habits workspace (Electron + Lit). Track habits, design syste
 
 ## Vault location
 
-The habit database is a single SQLite file (`phantasmal.db`). In the app you can:
+Your data lives in a **folder** (not a single database file):
 
-- **Choose folder…** — creates or opens `phantasmal.db` inside that folder (use a Google Drive / Dropbox directory to share across machines)
-- **Open .db file…** — point at an existing database
+```
+Phantasmal/
+  phantasmal.json
+  habits/
+  journal/
+```
+
+In the app you can:
+
+- **Choose folder…** — create or use a vault folder (put this in Drive/Dropbox to share across machines)
+- **Open existing vault…** — pick a folder that already has `phantasmal.json`
 - **Use Documents/Phantasmal** — local default under your Documents folder
 
-Each machine stores only a pointer to that path in its local app config.
+Each machine stores only a pointer to that folder in its local app config. Edit from either machine; sync conflicts stay scoped to individual files, like Obsidian.
+
+## Setup
+
+```bash
+bun install
+bun run dev
+```

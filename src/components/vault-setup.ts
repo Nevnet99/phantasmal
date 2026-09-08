@@ -138,10 +138,10 @@ export class VaultSetup extends LitElement {
 		void this.run(() => api.chooseFolder());
 	};
 
-	private openFile = () => {
+	private openExisting = () => {
 		const api = window.phantasmal?.vault;
 		if (!api) return;
-		void this.run(() => api.openDatabaseFile());
+		void this.run(() => api.openExistingVault());
 	};
 
 	private useDefault = () => {
@@ -165,18 +165,19 @@ export class VaultSetup extends LitElement {
 				<p class="eyebrow">Data vault</p>
 				<h2>${status.open ? "Vault connected" : "Choose where habits live"}</h2>
 				<p class="lead">
-					Put the database in a Google Drive or Dropbox folder to share one vault across machines.
-					Keep the app closed on one computer while the other writes.
+					Your vault is a folder of files—same idea as Obsidian. Put it in Google Drive or Dropbox
+					and edit from either machine; each habit and journal entry will be its own file so sync
+					stays safe.
 				</p>
 
 				${
 					status.path
-						? html`<p class="path" title="Vault database path">${status.path}</p>`
+						? html`<p class="path" title="Vault folder">${status.path}</p>`
 						: html`<p class="path">${status.defaultPath}</p>`
 				}
 				${
 					status.open && status.schemaVersion !== null
-						? html`<p class="ok">Open · schema v${status.schemaVersion}</p>`
+						? html`<p class="ok">Open · vault format v${status.schemaVersion}</p>`
 						: nothing
 				}
 				${status.error ? html`<p class="error">${status.error}</p>` : nothing}
@@ -185,11 +186,11 @@ export class VaultSetup extends LitElement {
 					<button class="primary" ?disabled=${this.busy} @click=${this.chooseFolder}>
 						Choose folder…
 					</button>
-					<button ?disabled=${this.busy} @click=${this.openFile}>Open .db file…</button>
+					<button ?disabled=${this.busy} @click=${this.openExisting}>Open existing vault…</button>
 					<button ?disabled=${this.busy} @click=${this.useDefault}>Use Documents/Phantasmal</button>
 					${
 						status.configured
-							? html`<button ?disabled=${this.busy} @click=${this.reveal}>Show in folder</button>`
+							? html`<button ?disabled=${this.busy} @click=${this.reveal}>Open folder</button>`
 							: nothing
 					}
 				</div>

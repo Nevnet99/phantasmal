@@ -2,7 +2,7 @@ import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openConfiguredVault, registerVaultIpc } from "./ipc";
-import { closeVault } from "./db/vault";
+import { closeVault } from "./vault/fs-vault";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

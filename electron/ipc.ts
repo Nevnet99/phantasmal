@@ -1,7 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import path from "node:path";
 import { defaultVaultPath, readConfig, setVaultPath } from "./config";
-import { closeVault, getOpenVault, openVaultAt } from "./db/vault";
+import { closeVault, getOpenVault, looksLikeVault, openVaultAt } from "./vault/fs-vault";
 import { VAULT_CHANNELS, type VaultStatus } from "../src/shared/vault";
 
 type Paths = {
@@ -88,6 +87,23 @@ function parentWindow(): BrowserWindow | null {
 	return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
 }
 
+async function pickDirectory(title: string, message: string): Promise<string | null> {
+	const win = parentWindow();
+	const options = {
+		title,
+		properties: ["openDirectory", "createDirectory"] as Array<"openDirectory" | "createDirectory">,
+		message,
+	};
+	const result = win
+		? await dialog.showOpenDialog(win, options)
+		: await dialog.showOpenDialog(options);
+
+	if (result.canceled || result.filePaths.length === 0) {
+		return null;
+	}
+	return result.filePaths[0];
+}
+
 export function registerVaultIpc(getPaths: () => Paths): void {
 	ipcMain.handle(VAULT_CHANNELS.getStatus, () => getVaultStatus(getPaths()));
 
@@ -98,47 +114,32 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 
 	ipcMain.handle(VAULT_CHANNELS.chooseFolder, async () => {
 		const paths = getPaths();
-		const win = parentWindow();
-		const result = win
-			? await dialog.showOpenDialog(win, {
-					title: "Choose vault folder",
-					properties: ["openDirectory", "createDirectory"],
-					message: "Phantasmal will create or open phantasmal.db in this folder.",
-				})
-			: await dialog.showOpenDialog({
-					title: "Choose vault folder",
-					properties: ["openDirectory", "createDirectory"],
-					message: "Phantasmal will create or open phantasmal.db in this folder.",
-				});
-
-		if (result.canceled || result.filePaths.length === 0) {
+		const folder = await pickDirectory(
+			"Choose vault folder",
+			"Phantasmal will create a file vault here (safe to put in Google Drive or Dropbox).",
+		);
+		if (!folder) {
 			return getVaultStatus(paths);
 		}
-
-		const vaultPath = path.join(result.filePaths[0], "phantasmal.db");
-		return assignAndOpen(paths, vaultPath);
+		return assignAndOpen(paths, folder);
 	});
 
-	ipcMain.handle(VAULT_CHANNELS.openDatabaseFile, async () => {
+	ipcMain.handle(VAULT_CHANNELS.openExistingVault, async () => {
 		const paths = getPaths();
-		const win = parentWindow();
-		const result = win
-			? await dialog.showOpenDialog(win, {
-					title: "Open existing vault",
-					properties: ["openFile"],
-					filters: [{ name: "Phantasmal database", extensions: ["db"] }],
-				})
-			: await dialog.showOpenDialog({
-					title: "Open existing vault",
-					properties: ["openFile"],
-					filters: [{ name: "Phantasmal database", extensions: ["db"] }],
-				});
-
-		if (result.canceled || result.filePaths.length === 0) {
+		const folder = await pickDirectory(
+			"Open existing vault",
+			"Pick a folder that already contains phantasmal.json.",
+		);
+		if (!folder) {
 			return getVaultStatus(paths);
 		}
-
-		return assignAndOpen(paths, result.filePaths[0]);
+		if (!looksLikeVault(folder)) {
+			return {
+				...getVaultStatus(paths),
+				error: "That folder is not a Phantasmal vault (missing phantasmal.json).",
+			};
+		}
+		return assignAndOpen(paths, folder);
 	});
 
 	ipcMain.handle(VAULT_CHANNELS.revealInFolder, async () => {
@@ -147,7 +148,7 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		if (!config.vaultPath) {
 			return false;
 		}
-		shell.showItemInFolder(config.vaultPath);
+		await shell.openPath(config.vaultPath);
 		return true;
 	});
 }
