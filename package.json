@@ -9,7 +9,7 @@
 		"node": ">=22.12.0"
 	},
 	"scripts": {
-		"dev": "vite",
+		"dev": "env -u ELECTRON_RUN_AS_NODE vite",
 		"build": "tsc --noEmit && vite build",
 		"lint": "oxlint .",
 		"lint:fix": "oxlint --fix .",
