@@ -1,0 +1,7 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"categories": {
+		"correctness": "error"
+	},
+	"ignorePatterns": ["dist/**", "dist-electron/**", "coverage/**", "node_modules/**", "release/**"]
+}

@@ -1,0 +1,11 @@
+dist
+dist-electron
+coverage
+node_modules
+bun.lock
+.release
+release
+.agents
+.vscode
+README.md
+AGENTS.md
