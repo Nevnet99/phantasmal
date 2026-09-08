@@ -8,93 +8,96 @@
 			content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';"
 		/>
 		<title>Phantasmal</title>
+		<style>
+			[x-cloak] {
+				display: none !important;
+			}
+		</style>
 	</head>
 	<body>
-		<div class="app" x-data="phantasmalApp" x-init="init()" x-cloak>
-			<template x-if="screen === 'loading'">
-				<p class="app__loading">Starting…</p>
-			</template>
+		<div class="app" x-data="phantasmalApp" x-init="init()">
+			<p class="app__loading" x-show="isLoading">Starting…</p>
 
-			<template x-if="screen === 'welcome'">
-				<section class="welcome" aria-label="Welcome">
-					<p class="welcome__brand">Phantasmal</p>
-					<h1 class="welcome__title">Welcome</h1>
-					<p class="welcome__lede">
-						Build systems for the person you want to become—habits, breaks, and a journal in one
-						place.
+			<section class="welcome" aria-label="Welcome" x-show="isWelcome" x-cloak>
+				<p class="welcome__brand">Phantasmal</p>
+				<h1 class="welcome__title">Welcome</h1>
+				<p class="welcome__lede">
+					Build systems for the person you want to become—habits, breaks, and a journal in one
+					place.
+				</p>
+				<button type="button" class="ds-btn ds-btn--primary" @click="startSetup()">
+					Get set up
+				</button>
+			</section>
+
+			<section class="setup" aria-label="Setup" x-show="isSetup" x-cloak>
+				<p class="setup__step">Step 1 of 1</p>
+				<h1 class="setup__title">Set up your vault</h1>
+				<p class="setup__lede">
+					Your vault is a folder of habit files on disk. Most people can start local; pick a synced
+					folder later if you want the same vault on another machine.
+				</p>
+
+				<div class="setup__choice setup__choice--primary">
+					<h2 class="setup__choice-title">On this computer</h2>
+					<p class="setup__choice-copy">
+						Create a vault in
+						<span x-text="defaultPathLabel"></span>
+						and start using Phantasmal.
 					</p>
-					<ds-button variant="primary" @click="startSetup()">Get set up</ds-button>
-				</section>
-			</template>
+					<button
+						type="button"
+						class="ds-btn ds-btn--primary"
+						@click="setupLocally()"
+						:disabled="busy"
+					>
+						Set up for me
+					</button>
+				</div>
 
-			<template x-if="screen === 'setup'">
-				<section class="setup" aria-label="Setup">
-					<p class="setup__step">Step 1 of 1</p>
-					<h1 class="setup__title">Set up your vault</h1>
-					<p class="setup__lede">
-						Your vault is a folder of habit files on disk. Most people can start local; pick a
-						synced folder later if you want the same vault on another machine.
+				<div class="setup__choice">
+					<h2 class="setup__choice-title">Synced or custom folder</h2>
+					<p class="setup__choice-copy">
+						Use Google Drive, Dropbox, or any folder you choose—including a vault you already have.
 					</p>
-
-					<div class="setup__choice setup__choice--primary">
-						<h2 class="setup__choice-title">On this computer</h2>
-						<p class="setup__choice-copy">
-							Create a vault in
-							<span x-text="status?.defaultPath ?? 'Documents/Phantasmal'"></span>
-							and start using Phantasmal.
-						</p>
-						<ds-button variant="primary" x-bind:disabled="busy" @click="setupLocally()">
-							Set up for me
-						</ds-button>
+					<div class="setup__actions">
+						<button type="button" class="ds-btn" @click="chooseFolder()" :disabled="busy">
+							Choose folder…
+						</button>
+						<button type="button" class="ds-btn" @click="openExisting()" :disabled="busy">
+							Open existing vault…
+						</button>
 					</div>
+				</div>
 
-					<div class="setup__choice">
-						<h2 class="setup__choice-title">Synced or custom folder</h2>
-						<p class="setup__choice-copy">
-							Use Google Drive, Dropbox, or any folder you choose—including a vault you already
-							have.
-						</p>
-						<div class="setup__actions">
-							<ds-button x-bind:disabled="busy" @click="chooseFolder()">Choose folder…</ds-button>
-							<ds-button x-bind:disabled="busy" @click="openExisting()">
-								Open existing vault…
-							</ds-button>
-						</div>
-					</div>
+				<p class="setup__ok" x-show="showReady" x-text="readyLabel"></p>
+				<p class="setup__error" x-show="showError" x-text="errorLabel"></p>
 
+				<div class="setup__footer" x-show="showReady">
+					<button type="button" class="ds-btn ds-btn--primary" @click="enterApp()">
+						Continue to Phantasmal
+					</button>
+				</div>
+			</section>
+
+			<section class="workspace" aria-label="Workspace" x-show="isApp" x-cloak>
+				<header class="workspace__header">
+					<p class="workspace__brand">Phantasmal</p>
 					<p
-						class="setup__ok"
-						x-show="status?.open && status?.schemaVersion !== null"
-						x-text="'Ready · ' + status.path"
+						class="workspace__path"
+						x-show="vaultPathLabel"
+						x-text="vaultPathLabel"
+						title="Vault folder"
 					></p>
-					<p class="setup__error" x-show="status?.error" x-text="status.error"></p>
-
-					<div class="setup__footer" x-show="status?.open">
-						<ds-button variant="primary" @click="enterApp()">Continue to Phantasmal</ds-button>
-					</div>
-				</section>
-			</template>
-
-			<template x-if="screen === 'app'">
-				<section class="workspace" aria-label="Workspace">
-					<header class="workspace__header">
-						<p class="workspace__brand">Phantasmal</p>
-						<p
-							class="workspace__path"
-							x-show="status?.path"
-							x-text="status.path"
-							title="Vault folder"
-						></p>
-					</header>
-					<div class="workspace__body">
-						<h1 class="workspace__title">You're set up</h1>
-						<p class="workspace__lede">
-							Your vault is ready. Habit tracking, creation, and journaling land here next.
-						</p>
-						<ds-button @click="reveal()">Open vault folder</ds-button>
-					</div>
-				</section>
-			</template>
+				</header>
+				<div class="workspace__body">
+					<h1 class="workspace__title">You're set up</h1>
+					<p class="workspace__lede">
+						Your vault is ready. Habit tracking, creation, and journaling land here next.
+					</p>
+					<button type="button" class="ds-btn" @click="reveal()">Open vault folder</button>
+				</div>
+			</section>
 		</div>
 
 		<script type="module" src="/src/main.ts"></script>

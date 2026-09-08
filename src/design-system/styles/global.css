@@ -1,3 +1,5 @@
+@import "./buttons.css";
+
 :root {
 	--color-ground: #1a1f1c;
 	--color-ink: #e8efe6;
