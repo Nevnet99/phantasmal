@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,7 +15,7 @@
 		</style>
 	</head>
 	<body>
-		<div class="app" x-data="phantasmalApp" x-init="init()">
+		<div class="app" x-data="phantasmalApp" x-init="init()" :data-density="uiDensity">
 			<a class="skip-link" href="#main">Skip to content</a>
 
 			<p class="app__loading" x-show="isLoading">Starting…</p>
@@ -124,17 +124,151 @@
 						</ul>
 					</section>
 
-					<section class="panel" x-show="isVault" aria-labelledby="vault-title">
-						<h1 id="vault-title" class="panel__title">Vault</h1>
+					<section class="panel" x-show="isSettings" aria-labelledby="settings-title">
+						<h1 id="settings-title" class="panel__title">Settings</h1>
 						<p class="panel__lede">
-							Habit files live in this folder. Use the same synced folder on another machine when
-							you want one shared vault.
+							Theme, layout density, and where your vault folder lives on this machine.
 						</p>
-						<p class="panel__path" x-text="vaultPathLabel" title="Vault folder"></p>
-						<div class="panel__actions">
-							<button type="button" class="ds-btn ds-btn--primary" @click="reveal()">
-								Open vault folder
+
+						<div class="settings-tabs" role="tablist" aria-label="Settings sections">
+							<button
+								type="button"
+								class="settings-tabs__tab"
+								:class="isSettingsUi && 'settings-tabs__tab--active'"
+								role="tab"
+								id="settings-tab-ui"
+								:aria-selected="isSettingsUi"
+								aria-controls="settings-panel-ui"
+								@click="setSettingsTab('ui')"
+							>
+								UI
 							</button>
+							<button
+								type="button"
+								class="settings-tabs__tab"
+								:class="isSettingsVault && 'settings-tabs__tab--active'"
+								role="tab"
+								id="settings-tab-vault"
+								:aria-selected="isSettingsVault"
+								aria-controls="settings-panel-vault"
+								@click="setSettingsTab('vault')"
+							>
+								Vault
+							</button>
+						</div>
+
+						<div
+							class="settings-panel"
+							role="tabpanel"
+							id="settings-panel-ui"
+							aria-labelledby="settings-tab-ui"
+							x-show="isSettingsUi"
+						>
+							<h2 class="settings-panel__title">Theme</h2>
+							<p class="settings-panel__copy">Color scheme for the shell on this machine.</p>
+							<div class="pref-options" role="radiogroup" aria-label="Theme">
+								<button
+									type="button"
+									class="pref-option"
+									:class="isThemeDark && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isThemeDark"
+									@click="setTheme('dark')"
+								>
+									<span class="pref-option__label">Dark</span>
+									<span class="pref-option__hint">Default. Soft ink on deep ground.</span>
+								</button>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isThemeLight && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isThemeLight"
+									@click="setTheme('light')"
+								>
+									<span class="pref-option__label">Light</span>
+									<span class="pref-option__hint">Paper ground, darker type.</span>
+								</button>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isThemeSystem && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isThemeSystem"
+									@click="setTheme('system')"
+								>
+									<span class="pref-option__label">System</span>
+									<span class="pref-option__hint">Follow the OS light or dark setting.</span>
+								</button>
+							</div>
+
+							<h2 class="settings-panel__title">Density</h2>
+							<p class="settings-panel__copy">
+								How tight the shell feels—spacing, padding, and corner radius.
+							</p>
+							<div class="pref-options" role="radiogroup" aria-label="UI density">
+								<button
+									type="button"
+									class="pref-option"
+									:class="isDensityCompact && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isDensityCompact"
+									@click="setDensity('compact')"
+								>
+									<span class="pref-option__label">Compact</span>
+									<span class="pref-option__hint">Sharp edges, dense chrome. Default.</span>
+								</button>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isDensityComfortable && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isDensityComfortable"
+									@click="setDensity('comfortable')"
+								>
+									<span class="pref-option__label">Comfortable</span>
+									<span class="pref-option__hint">A little more air and soft corners.</span>
+								</button>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isDensityRoomy && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isDensityRoomy"
+									@click="setDensity('roomy')"
+								>
+									<span class="pref-option__label">Roomy</span>
+									<span class="pref-option__hint">Looser spacing and rounder controls.</span>
+								</button>
+							</div>
+						</div>
+
+						<div
+							class="settings-panel"
+							role="tabpanel"
+							id="settings-panel-vault"
+							aria-labelledby="settings-tab-vault"
+							x-show="isSettingsVault"
+						>
+							<h2 class="settings-panel__title">Vault folder</h2>
+							<p class="settings-panel__copy">
+								Habit files live here. Point another machine at the same synced folder for one
+								shared vault.
+							</p>
+							<p class="panel__path" x-text="vaultPathLabel" title="Vault folder"></p>
+							<p class="setup__ok" x-show="showReady" x-text="readyLabel"></p>
+							<p class="setup__error" x-show="showError" x-text="errorLabel" role="alert"></p>
+							<div class="panel__actions">
+								<button type="button" class="ds-btn ds-btn--primary" @click="reveal()">
+									Open vault folder
+								</button>
+								<button type="button" class="ds-btn" @click="chooseFolder()" :disabled="busy">
+									Move to folder…
+								</button>
+								<button type="button" class="ds-btn" @click="openExisting()" :disabled="busy">
+									Open existing vault…
+								</button>
+							</div>
 						</div>
 					</section>
 

@@ -2,25 +2,68 @@
 @import "./buttons.css";
 
 :root {
-	--color-ground: #1a1f1c;
-	--color-ink: #e8efe6;
-	--color-muted: #9aab9e;
-	--color-line: #2f3a33;
-	--color-accent: #8fbc8f;
-	--color-danger: #e8a090;
 	--font-display: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
 	--font-body: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
 	--font-mono: "Geist Mono Variable", "Geist Mono Fallback", ui-monospace, monospace;
 	--text-display: clamp(2.5rem, 5vw, 3.75rem);
 	--text-body: 1.125rem;
 	--text-caption: 0.75rem;
+	/* Compact defaults — sharp, dense chrome */
+	--space-xs: 0.25rem;
+	--space-sm: 0.5rem;
+	--space-md: 0.75rem;
+	--space-lg: 1.1rem;
+	--space-xl: 1.75rem;
+	--radius-sm: 0;
+	--radius-md: 0;
+	--control-pad-y: 0.4rem;
+	--control-pad-x: 0.7rem;
+	--sidebar-width: 13rem;
+	--nav-min-height: 2rem;
+	/* Dark theme (default) */
+	--color-ground: #1a1f1c;
+	--color-ink: #e8efe6;
+	--color-muted: #9aab9e;
+	--color-line: #2f3a33;
+	--color-accent: #8fbc8f;
+	--color-danger: #e8a090;
+}
+
+:root[data-theme="light"] {
+	--color-ground: #eef2ec;
+	--color-ink: #1a221c;
+	--color-muted: #5a6b5f;
+	--color-line: #c5d0c8;
+	--color-accent: #3f6b48;
+	--color-danger: #a94438;
+}
+
+[data-density="comfortable"] {
 	--space-xs: 0.35rem;
 	--space-sm: 0.65rem;
 	--space-md: 1rem;
 	--space-lg: 1.5rem;
-	--space-xl: 2.5rem;
+	--space-xl: 2.25rem;
+	--radius-sm: 0.25rem;
+	--radius-md: 0.4rem;
+	--control-pad-y: 0.5rem;
+	--control-pad-x: 0.85rem;
+	--sidebar-width: 14.5rem;
+	--nav-min-height: 2.35rem;
+}
+
+[data-density="roomy"] {
+	--space-xs: 0.4rem;
+	--space-sm: 0.75rem;
+	--space-md: 1.15rem;
+	--space-lg: 1.75rem;
+	--space-xl: 2.75rem;
 	--radius-sm: 0.4rem;
 	--radius-md: 0.75rem;
+	--control-pad-y: 0.55rem;
+	--control-pad-x: 0.95rem;
+	--sidebar-width: 15.5rem;
+	--nav-min-height: 2.5rem;
 }
 
 *,
@@ -41,4 +84,12 @@ body {
 	font-family: var(--font-body);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+}
+
+html {
+	color-scheme: dark;
+}
+
+html[data-theme="light"] {
+	color-scheme: light;
 }

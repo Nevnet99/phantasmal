@@ -20,11 +20,12 @@ export class DsButton extends LitElement {
 			appearance: none;
 			border: 1px solid var(--color-line);
 			border-radius: var(--radius-sm);
-			padding: 0.55rem 0.9rem;
+			padding: var(--control-pad-y, 0.4rem) var(--control-pad-x, 0.7rem);
 			background: transparent;
 			color: var(--color-ink);
 			font: inherit;
 			font-size: 0.95rem;
+			line-height: 1.2;
 			cursor: pointer;
 		}
 

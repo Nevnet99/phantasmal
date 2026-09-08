@@ -28,6 +28,10 @@ Geist Variable for UI/display, Geist Mono for paths and meta (same loading appro
 - **App screens:** Alpine.js + HTML (`index.html`, `src/app/`) — keep app JS thin
 - Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
 - First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app`.
+- **Settings** (sidebar): tabs for **UI** (theme + layout density) and **Vault** (path / move / open).
+- Default chrome is **compact** (0 radius, tight spacing) and **dark**. Prefs are stored per machine in
+  `userData/config.json` as `uiDensity` (`compact` | `comfortable` | `roomy`) and
+  `uiTheme` (`dark` | `light` | `system`).
 
 ## Data vault
 
@@ -40,10 +44,10 @@ Vault/
   journal/
 ```
 
-Choose the folder in the UI. Point both machines at the same synced folder
-(Google Drive, Dropbox, etc.). Each machine only stores that path in
-`userData/config.json`. Habits and journal entries will be separate files so
-cloud sync can merge edits from either machine.
+Choose the folder during setup or later under Settings → Vault. Point both machines at
+the same synced folder (Google Drive, Dropbox, etc.). Each machine only stores that path
+(and UI prefs) in `userData/config.json`. Habits and journal entries will be separate
+files so cloud sync can merge edits from either machine.
 
 ## Documentation
 
