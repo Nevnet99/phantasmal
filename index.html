@@ -16,6 +16,8 @@
 	</head>
 	<body>
 		<div class="app" x-data="phantasmalApp" x-init="init()">
+			<a class="skip-link" href="#main">Skip to content</a>
+
 			<p class="app__loading" x-show="isLoading">Starting…</p>
 
 			<section class="welcome" aria-label="Welcome" x-show="isWelcome" x-cloak>
@@ -71,7 +73,7 @@
 				</div>
 
 				<p class="setup__ok" x-show="showReady" x-text="readyLabel"></p>
-				<p class="setup__error" x-show="showError" x-text="errorLabel"></p>
+				<p class="setup__error" x-show="showError" x-text="errorLabel" role="alert"></p>
 
 				<div class="setup__footer" x-show="showReady">
 					<button type="button" class="ds-btn ds-btn--primary" @click="enterApp()">
@@ -80,24 +82,75 @@
 				</div>
 			</section>
 
-			<section class="workspace" aria-label="Workspace" x-show="isApp" x-cloak>
-				<header class="workspace__header">
-					<p class="workspace__brand">Phantasmal</p>
-					<p
-						class="workspace__path"
-						x-show="vaultPathLabel"
-						x-text="vaultPathLabel"
-						title="Vault folder"
-					></p>
-				</header>
-				<div class="workspace__body">
-					<h1 class="workspace__title">You're set up</h1>
-					<p class="workspace__lede">
-						Your vault is ready. Habit tracking, creation, and journaling land here next.
-					</p>
-					<button type="button" class="ds-btn" @click="reveal()">Open vault folder</button>
-				</div>
-			</section>
+			<div class="shell" x-show="isApp" x-cloak>
+				<aside class="sidebar" aria-label="Primary">
+					<p class="sidebar__brand">Phantasmal</p>
+					<nav class="sidebar__nav" aria-label="Sections">
+						<template x-for="item in navItems" :key="item.id">
+							<button
+								type="button"
+								class="sidebar__link"
+								:class="isActive(item.id) && 'sidebar__link--active'"
+								:aria-current="isActive(item.id) ? 'page' : false"
+								@click="goTo(item.id)"
+							>
+								<span class="sidebar__link-label" x-text="item.label"></span>
+								<span class="sidebar__badge" x-show="!item.enabled">Soon</span>
+							</button>
+						</template>
+					</nav>
+				</aside>
+
+				<main id="main" class="shell__main">
+					<section class="panel" x-show="isHome" aria-labelledby="home-title">
+						<h1 id="home-title" class="panel__title">Home</h1>
+						<p class="panel__lede">
+							Overview of your systems. Open any section—areas still in progress show a Soon label
+							and a placeholder screen.
+						</p>
+
+						<ul class="overview">
+							<template x-for="item in navItems" :key="'card-' + item.id">
+								<li class="overview__item" x-show="item.id !== 'home'">
+									<button type="button" class="overview__card" @click="goTo(item.id)">
+										<span class="overview__card-top">
+											<span class="overview__card-title" x-text="item.label"></span>
+											<span class="overview__badge" x-show="!item.enabled">Soon</span>
+										</span>
+										<span class="overview__card-blurb" x-text="item.blurb"></span>
+									</button>
+								</li>
+							</template>
+						</ul>
+					</section>
+
+					<section class="panel" x-show="isVault" aria-labelledby="vault-title">
+						<h1 id="vault-title" class="panel__title">Vault</h1>
+						<p class="panel__lede">
+							Habit files live in this folder. Use the same synced folder on another machine when
+							you want one shared vault.
+						</p>
+						<p class="panel__path" x-text="vaultPathLabel" title="Vault folder"></p>
+						<div class="panel__actions">
+							<button type="button" class="ds-btn ds-btn--primary" @click="reveal()">
+								Open vault folder
+							</button>
+						</div>
+					</section>
+
+					<section class="panel" x-show="isStub" aria-labelledby="stub-title">
+						<p class="panel__eyebrow">Coming soon</p>
+						<h1 id="stub-title" class="panel__title" x-text="currentLabel"></h1>
+						<p class="panel__lede" x-text="currentBlurb"></p>
+						<p class="panel__hint">
+							This screen is a placeholder so the shell stays ready while the feature is built.
+						</p>
+						<div class="panel__actions">
+							<button type="button" class="ds-btn" @click="goTo('home')">Back to Home</button>
+						</div>
+					</section>
+				</main>
+			</div>
 		</div>
 
 		<script type="module" src="/src/main.ts"></script>

@@ -7,6 +7,7 @@
 	--color-muted: #9aab9e;
 	--color-line: #2f3a33;
 	--color-accent: #8fbc8f;
+	--color-danger: #e8a090;
 	--font-display: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
 	--font-body: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
 	--font-mono: "Geist Mono Variable", "Geist Mono Fallback", ui-monospace, monospace;
@@ -38,4 +39,6 @@ body {
 
 body {
 	font-family: var(--font-body);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }

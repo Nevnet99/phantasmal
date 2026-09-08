@@ -16,7 +16,11 @@ Run the full quality gate before committing:
 bun run check
 ```
 
-## Typography
+## App shell
+
+After vault setup, the app uses a sidebar + main layout. Routes live in
+`src/app/nav.ts`. Unfinished features stay reachable as stub screens and show a
+Soon badge. Home lists every section with a short blurb.
 
 Geist Variable for UI/display, Geist Mono for paths and meta (same loading approach as lukebrannagan-3).
 
