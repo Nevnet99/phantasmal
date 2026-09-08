@@ -16,12 +16,14 @@ Run the full quality gate before committing:
 bun run check
 ```
 
-## Stack
+## Data vault
 
-- Electron + Lit + TypeScript
-- Bun package manager
-- oxlint + Prettier
-- Vitest
+The SQLite database path is chosen in the app UI and stored in Electron
+`userData/config.json` (per machine). Point both machines at the same
+`phantasmal.db` inside a synced folder (Google Drive, Dropbox, etc.).
+
+Only one machine should write at a time while the cloud client is syncing.
+
 
 ## Documentation
 

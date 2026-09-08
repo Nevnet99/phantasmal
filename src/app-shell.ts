@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import "./components/vault-setup";
 
 @customElement("app-shell")
 export class AppShell extends LitElement {
@@ -50,12 +51,6 @@ export class AppShell extends LitElement {
 			padding: var(--space-lg);
 			background: color-mix(in srgb, var(--color-ground) 88%, var(--color-ink));
 		}
-
-		.stage p {
-			font-size: var(--text-caption);
-			text-transform: uppercase;
-			letter-spacing: 0.08em;
-		}
 	`;
 
 	render() {
@@ -66,7 +61,7 @@ export class AppShell extends LitElement {
 					<p>An Atomic Habits workspace for systems, streaks, and reflection.</p>
 				</header>
 				<section class="stage" aria-label="Workspace">
-					<p>Workspace ready</p>
+					<vault-setup></vault-setup>
 				</section>
 			</div>
 		`;
