@@ -1,6 +1,8 @@
 # Phantasmal
 
-Local-first Atomic Habits workspace (Electron + Lit). Track habits, design systems for change, break bad habits, and journal — with an Obsidian-style file vault you can sync via Google Drive or Dropbox.
+Local-first Atomic Habits workspace (Electron). Track habits, design systems for change, break bad habits, and journal — with an Obsidian-style file vault you can sync via Google Drive or Dropbox.
+
+**UI:** Lit for the design system only; Alpine.js for app screens (minimal JS).
 
 ## Requirements
 

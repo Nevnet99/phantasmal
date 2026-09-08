@@ -10,7 +10,62 @@
 		<title>Phantasmal</title>
 	</head>
 	<body>
-		<app-shell></app-shell>
+		<div class="shell">
+			<header class="shell__header">
+				<h1 class="shell__title">Phantasmal</h1>
+				<p class="shell__lede">An Atomic Habits workspace for systems, streaks, and reflection.</p>
+			</header>
+
+			<section
+				class="shell__stage"
+				aria-label="Workspace"
+				x-data="vaultSetup"
+				x-init="init()"
+				x-cloak
+			>
+				<p class="vault-setup__eyebrow" x-show="!status">Loading vault…</p>
+
+				<div class="vault-setup" x-show="status" x-cloak>
+					<p class="vault-setup__eyebrow">Data vault</p>
+					<h2
+						class="vault-setup__title"
+						x-text="status.open ? 'Vault connected' : 'Choose where habits live'"
+					></h2>
+					<p class="vault-setup__lead">
+						Your vault is a folder of files—same idea as Obsidian. Put it in Google Drive or Dropbox
+						and edit from either machine; each habit and journal entry will be its own file so sync
+						stays safe.
+					</p>
+					<p
+						class="vault-setup__path"
+						title="Vault folder"
+						x-text="status.path ?? status.defaultPath"
+					></p>
+					<p
+						class="vault-setup__ok"
+						x-show="status.open && status.schemaVersion !== null"
+						x-text="'Open · vault format v' + status.schemaVersion"
+					></p>
+					<p class="vault-setup__error" x-show="status.error" x-text="status.error"></p>
+
+					<div class="vault-setup__actions">
+						<ds-button variant="primary" x-bind:disabled="busy" @click="chooseFolder()">
+							Choose folder…
+						</ds-button>
+						<ds-button x-bind:disabled="busy" @click="openExisting()">
+							Open existing vault…
+						</ds-button>
+						<ds-button x-bind:disabled="busy" @click="useDefault()">
+							Use Documents/Phantasmal
+						</ds-button>
+						<ds-button x-show="status.configured" x-bind:disabled="busy" @click="reveal()">
+							Open folder
+						</ds-button>
+					</div>
+				</div>
+			</section>
+		</div>
+
 		<script type="module" src="/src/main.ts"></script>
 	</body>
 </html>
