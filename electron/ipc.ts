@@ -1,12 +1,32 @@
-import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { defaultVaultPath, readConfig, setVaultPath } from "./config";
+import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
+import { defaultVaultPath, readConfig, setUiDensity, setUiTheme, setVaultPath } from "./config";
 import { closeVault, getOpenVault, looksLikeVault, openVaultAt } from "./vault/fs-vault";
+import {
+	SETTINGS_CHANNELS,
+	isUiDensity,
+	isUiTheme,
+	type AppPrefs,
+	type UiTheme,
+} from "../src/shared/prefs";
 import { VAULT_CHANNELS, type VaultStatus } from "../src/shared/vault";
 
 type Paths = {
 	userData: string;
 	documents: string;
 };
+
+function applyNativeTheme(theme: UiTheme): void {
+	nativeTheme.themeSource = theme;
+}
+
+function prefsFromConfig(userDataDir: string): AppPrefs {
+	const config = readConfig(userDataDir);
+	return { uiDensity: config.uiDensity, uiTheme: config.uiTheme };
+}
+
+export function syncNativeThemeFromConfig(userDataDir: string): void {
+	applyNativeTheme(readConfig(userDataDir).uiTheme);
+}
 
 function statusFromError(paths: Paths, error: unknown): VaultStatus {
 	const config = readConfig(paths.userData);
@@ -150,5 +170,24 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		}
 		await shell.openPath(config.vaultPath);
 		return true;
+	});
+
+	ipcMain.handle(SETTINGS_CHANNELS.getPrefs, () => prefsFromConfig(getPaths().userData));
+
+	ipcMain.handle(SETTINGS_CHANNELS.setUiDensity, (_event, density: unknown) => {
+		if (!isUiDensity(density)) {
+			return prefsFromConfig(getPaths().userData);
+		}
+		setUiDensity(getPaths().userData, density);
+		return prefsFromConfig(getPaths().userData);
+	});
+
+	ipcMain.handle(SETTINGS_CHANNELS.setUiTheme, (_event, theme: unknown) => {
+		if (!isUiTheme(theme)) {
+			return prefsFromConfig(getPaths().userData);
+		}
+		const config = setUiTheme(getPaths().userData, theme);
+		applyNativeTheme(config.uiTheme);
+		return prefsFromConfig(getPaths().userData);
 	});
 }

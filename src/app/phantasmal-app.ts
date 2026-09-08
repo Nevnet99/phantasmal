@@ -1,11 +1,18 @@
 import type { VaultStatus } from "@/shared/vault";
+import type { UiDensity, UiTheme } from "@/shared/prefs";
 import { NAV_ITEMS, navItemById, type AppRoute, type NavItem } from "./nav";
 
 export type AppScreen = "loading" | "welcome" | "setup" | "app";
+export type SettingsTab = "ui" | "vault";
+export type ResolvedTheme = "light" | "dark";
 
 type PhantasmalApp = {
 	screen: AppScreen;
 	route: AppRoute;
+	settingsTab: SettingsTab;
+	uiDensity: UiDensity;
+	uiTheme: UiTheme;
+	systemPrefersDark: boolean;
 	status: VaultStatus | null;
 	busy: boolean;
 	navItems: NavItem[];
@@ -14,8 +21,17 @@ type PhantasmalApp = {
 	get isSetup(): boolean;
 	get isApp(): boolean;
 	get isHome(): boolean;
-	get isVault(): boolean;
+	get isSettings(): boolean;
+	get isSettingsUi(): boolean;
+	get isSettingsVault(): boolean;
 	get isStub(): boolean;
+	get isDensityCompact(): boolean;
+	get isDensityComfortable(): boolean;
+	get isDensityRoomy(): boolean;
+	get isThemeSystem(): boolean;
+	get isThemeLight(): boolean;
+	get isThemeDark(): boolean;
+	get resolvedTheme(): ResolvedTheme;
 	get currentLabel(): string;
 	get currentBlurb(): string;
 	get defaultPathLabel(): string;
@@ -25,11 +41,16 @@ type PhantasmalApp = {
 	get showError(): boolean;
 	get vaultPathLabel(): string;
 	init(): Promise<void>;
+	bindSystemTheme(): void;
+	applyTheme(): void;
 	startSetup(): void;
 	setupLocally(): Promise<void>;
 	enterApp(): void;
 	goTo(id: AppRoute): void;
 	isActive(id: AppRoute): boolean;
+	setSettingsTab(tab: SettingsTab): void;
+	setDensity(density: UiDensity): Promise<void>;
+	setTheme(theme: UiTheme): Promise<void>;
 	chooseFolder(): Promise<void>;
 	openExisting(): Promise<void>;
 	reveal(): Promise<void>;
@@ -51,6 +72,10 @@ export function phantasmalApp(): PhantasmalApp {
 	return {
 		screen: "loading",
 		route: "home",
+		settingsTab: "ui",
+		uiDensity: "compact",
+		uiTheme: "dark",
+		systemPrefersDark: true,
 		status: null,
 		busy: false,
 		navItems: NAV_ITEMS,
@@ -75,13 +100,51 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.route === "home";
 		},
 
-		get isVault() {
-			return this.route === "vault";
+		get isSettings() {
+			return this.route === "settings";
+		},
+
+		get isSettingsUi() {
+			return this.settingsTab === "ui";
+		},
+
+		get isSettingsVault() {
+			return this.settingsTab === "vault";
 		},
 
 		get isStub() {
 			const item = navItemById(this.route);
 			return Boolean(item && !item.enabled);
+		},
+
+		get isDensityCompact() {
+			return this.uiDensity === "compact";
+		},
+
+		get isDensityComfortable() {
+			return this.uiDensity === "comfortable";
+		},
+
+		get isDensityRoomy() {
+			return this.uiDensity === "roomy";
+		},
+
+		get isThemeSystem() {
+			return this.uiTheme === "system";
+		},
+
+		get isThemeLight() {
+			return this.uiTheme === "light";
+		},
+
+		get isThemeDark() {
+			return this.uiTheme === "dark";
+		},
+
+		get resolvedTheme() {
+			if (this.uiTheme === "light") return "light";
+			if (this.uiTheme === "dark") return "dark";
+			return this.systemPrefersDark ? "dark" : "light";
 		},
 
 		get currentLabel() {
@@ -116,8 +179,30 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.status?.path ?? "";
 		},
 
+		bindSystemTheme() {
+			const mq = window.matchMedia("(prefers-color-scheme: dark)");
+			this.systemPrefersDark = mq.matches;
+			mq.addEventListener("change", (event) => {
+				this.systemPrefersDark = event.matches;
+				this.applyTheme();
+			});
+		},
+
+		applyTheme() {
+			document.documentElement.dataset.theme = this.resolvedTheme;
+		},
+
 		async init() {
+			this.bindSystemTheme();
 			const api = window.phantasmal?.vault;
+			const settings = window.phantasmal?.settings;
+			if (settings) {
+				const prefs = await settings.getPrefs();
+				this.uiDensity = prefs.uiDensity;
+				this.uiTheme = prefs.uiTheme;
+			}
+			this.applyTheme();
+
 			if (!api) {
 				this.status = unavailableStatus();
 				this.screen = "welcome";
@@ -158,10 +243,37 @@ export function phantasmalApp(): PhantasmalApp {
 		goTo(id) {
 			if (!navItemById(id)) return;
 			this.route = id;
+			if (id === "settings") {
+				this.settingsTab = "ui";
+			}
 		},
 
 		isActive(id) {
 			return this.route === id;
+		},
+
+		setSettingsTab(tab) {
+			this.settingsTab = tab;
+		},
+
+		async setDensity(density) {
+			this.uiDensity = density;
+			const settings = window.phantasmal?.settings;
+			if (!settings) return;
+			const prefs = await settings.setUiDensity(density);
+			this.uiDensity = prefs.uiDensity;
+			this.uiTheme = prefs.uiTheme;
+		},
+
+		async setTheme(theme) {
+			this.uiTheme = theme;
+			this.applyTheme();
+			const settings = window.phantasmal?.settings;
+			if (!settings) return;
+			const prefs = await settings.setUiTheme(theme);
+			this.uiDensity = prefs.uiDensity;
+			this.uiTheme = prefs.uiTheme;
+			this.applyTheme();
 		},
 
 		async run(action) {

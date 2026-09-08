@@ -1,4 +1,4 @@
-export type AppRoute = "home" | "track" | "create" | "break" | "journal" | "identity" | "vault";
+export type AppRoute = "home" | "track" | "create" | "break" | "journal" | "identity" | "settings";
 
 export type NavItem = {
 	id: AppRoute;
@@ -7,7 +7,7 @@ export type NavItem = {
 	enabled: boolean;
 };
 
-/** Sidebar + home overview. Disabled items are stubs until built. */
+/** Sidebar + home overview. Unfinished features open stub screens. */
 export const NAV_ITEMS: NavItem[] = [
 	{
 		id: "home",
@@ -18,7 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
 	{
 		id: "track",
 		label: "Track",
-		blurb: "Daily check-ins and streaks—don't break the chain.",
+		blurb: "Daily check-ins and streaks. Keep the chain intact.",
 		enabled: false,
 	},
 	{
@@ -46,9 +46,9 @@ export const NAV_ITEMS: NavItem[] = [
 		enabled: false,
 	},
 	{
-		id: "vault",
-		label: "Vault",
-		blurb: "Where your habit files live on this machine.",
+		id: "settings",
+		label: "Settings",
+		blurb: "Density, vault location, and machine preferences.",
 		enabled: true,
 	},
 ];

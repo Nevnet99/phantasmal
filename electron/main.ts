@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { openConfiguredVault, registerVaultIpc } from "./ipc";
+import { openConfiguredVault, registerVaultIpc, syncNativeThemeFromConfig } from "./ipc";
 import { closeVault } from "./vault/fs-vault";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +36,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
 	registerVaultIpc(getPaths);
+	syncNativeThemeFromConfig(getPaths().userData);
 	openConfiguredVault(getPaths());
 	createWindow();
 

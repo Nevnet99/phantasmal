@@ -1,5 +1,6 @@
 export {};
 
+import type { SettingsApi } from "./shared/prefs";
 import type { VaultApi } from "./shared/vault";
 
 declare global {
@@ -7,6 +8,7 @@ declare global {
 		phantasmal?: {
 			platform: NodeJS.Platform;
 			vault: VaultApi;
+			settings: SettingsApi;
 		};
 	}
 }
