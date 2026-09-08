@@ -5,7 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta
 			http-equiv="Content-Security-Policy"
-			content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';"
+			content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self';"
 		/>
 		<title>Phantasmal</title>
 		<style>
@@ -127,7 +127,7 @@
 					<section class="panel" x-show="isSettings" aria-labelledby="settings-title">
 						<h1 id="settings-title" class="panel__title">Settings</h1>
 						<p class="panel__lede">
-							Theme, layout density, and where your vault folder lives on this machine.
+							Theme, reminders, archived habits, and where your vault folder lives on this machine.
 						</p>
 
 						<div class="settings-tabs" role="tablist" aria-label="Settings sections">
@@ -142,6 +142,18 @@
 								@click="setSettingsTab('ui')"
 							>
 								UI
+							</button>
+							<button
+								type="button"
+								class="settings-tabs__tab"
+								:class="isSettingsHabits && 'settings-tabs__tab--active'"
+								role="tab"
+								id="settings-tab-habits"
+								:aria-selected="isSettingsHabits"
+								aria-controls="settings-panel-habits"
+								@click="setSettingsTab('habits')"
+							>
+								Habits
 							</button>
 							<button
 								type="button"
@@ -246,6 +258,76 @@
 						<div
 							class="settings-panel"
 							role="tabpanel"
+							id="settings-panel-habits"
+							aria-labelledby="settings-tab-habits"
+							x-show="isSettingsHabits"
+						>
+							<h2 class="settings-panel__title">Daily reminder</h2>
+							<p class="settings-panel__copy">
+								Once a day, notify when habits are still due. The dock badge always shows how many
+								remain today.
+							</p>
+							<div
+								class="pref-options pref-options--two"
+								role="radiogroup"
+								aria-label="Daily reminder"
+							>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isDailyReminderOn && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isDailyReminderOn"
+									@click="setDailyReminder(true)"
+								>
+									<span class="pref-option__label">On</span>
+									<span class="pref-option__hint">Notify once when something is left.</span>
+								</button>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isDailyReminderOff && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isDailyReminderOff"
+									@click="setDailyReminder(false)"
+								>
+									<span class="pref-option__label">Off</span>
+									<span class="pref-option__hint">Badge only—no notification.</span>
+								</button>
+							</div>
+
+							<h2 class="settings-panel__title">Archived habits</h2>
+							<p class="settings-panel__copy">
+								Archived habits stay out of Track but keep past check-offs on your graphs. Restore
+								to bring one back.
+							</p>
+							<p class="panel__hint" x-show="!hasArchivedHabits">No archived habits.</p>
+							<ul class="archive-list" x-show="hasArchivedHabits">
+								<template x-for="habit in archivedHabits" :key="habit.id">
+									<li class="archive-list__item">
+										<div class="archive-list__body">
+											<p class="archive-list__name" x-text="habit.name"></p>
+											<p class="archive-list__meta">
+												Archived
+												<span x-text="habit.archivedLabel"></span>
+											</p>
+											<p
+												class="archive-list__note"
+												x-show="habit.archiveNote"
+												x-text="habit.archiveNote"
+											></p>
+										</div>
+										<button type="button" class="ds-btn" @click="restoreArchivedHabit(habit.id)">
+											Restore
+										</button>
+									</li>
+								</template>
+							</ul>
+						</div>
+
+						<div
+							class="settings-panel"
+							role="tabpanel"
 							id="settings-panel-vault"
 							aria-labelledby="settings-tab-vault"
 							x-show="isSettingsVault"
@@ -272,6 +354,387 @@
 						</div>
 					</section>
 
+					<section class="panel panel--wide track" x-show="isTrack" aria-labelledby="track-title">
+						<header class="track__header">
+							<div class="track__heading">
+								<h1 id="track-title" class="panel__title">Track</h1>
+								<p class="track__status">
+									<span class="track__date" x-text="track.selectedLabel"></span>
+									<span class="track__sep" aria-hidden="true">·</span>
+									<span x-text="track.summaryLabel"></span>
+								</p>
+							</div>
+							<div class="track__actions">
+								<button
+									type="button"
+									class="ds-btn"
+									x-show="!track.isSelectedToday"
+									@click="goToToday()"
+								>
+									Today
+								</button>
+								<button type="button" class="ds-btn ds-btn--primary" @click="goTo('create')">
+									New habit
+								</button>
+							</div>
+						</header>
+
+						<p class="setup__error" x-show="habitsError" x-text="habitsError" role="alert"></p>
+
+						<p class="panel__hint" x-show="trackEmpty">
+							No habits yet.
+							<button type="button" class="text-link" @click="goTo('create')">Create one</button>
+							to start the chain.
+						</p>
+
+						<div class="track__body" x-show="!trackEmpty">
+							<section class="track__viz" aria-labelledby="viz-title">
+								<div class="track__viz-bar">
+									<ds-toggle
+										id="track-viz-toggle"
+										class="track__viz-toggle"
+										aria-label="Activity view"
+										:value="trackViz"
+										@ds-change="onTrackVizChange($event)"
+									>
+										<button type="button" data-value="graph" title="Graph" aria-label="Graph">
+											<ds-icon name="grid_view" size="sm"></ds-icon>
+										</button>
+										<button
+											type="button"
+											data-value="calendar"
+											title="Calendar"
+											aria-label="Calendar"
+										>
+											<ds-icon name="calendar_month" size="sm"></ds-icon>
+										</button>
+									</ds-toggle>
+								</div>
+
+								<h2 id="viz-title" class="visually-hidden">Activity</h2>
+
+								<div
+									class="track__graph"
+									id="viz-panel-graph"
+									aria-label="Contribution graph"
+									x-show="isTrackGraph"
+								>
+									<div class="graph" role="grid" aria-label="Habit activity over the last year">
+										<template x-for="cell in track.graph" :key="cell.day">
+											<button
+												type="button"
+												:class="graphLevelClass(cell)"
+												:aria-label="cell.label"
+												@mouseenter="showDayPop($event, cell)"
+												@mouseleave="hideDayPop()"
+												@focus="showDayPop($event, cell)"
+												@blur="hideDayPop()"
+												@click="selectDay(cell.day)"
+											></button>
+										</template>
+									</div>
+									<div class="graph__legend" aria-hidden="true">
+										<span>Less</span>
+										<span class="graph__cell graph__cell--l0"></span>
+										<span class="graph__cell graph__cell--l1"></span>
+										<span class="graph__cell graph__cell--l2"></span>
+										<span class="graph__cell graph__cell--l3"></span>
+										<span class="graph__cell graph__cell--l4"></span>
+										<span>More</span>
+									</div>
+								</div>
+
+								<div
+									class="track__cal"
+									id="viz-panel-calendar"
+									aria-label="Month calendar"
+									x-show="isTrackCalendar"
+								>
+									<div class="cal__nav">
+										<button
+											type="button"
+											class="ds-btn"
+											@click="shiftMonth(-1)"
+											aria-label="Previous month"
+										>
+											Prev
+										</button>
+										<p class="cal__month" x-text="track.calendarMonthLabel"></p>
+										<button
+											type="button"
+											class="ds-btn"
+											@click="shiftMonth(1)"
+											aria-label="Next month"
+										>
+											Next
+										</button>
+									</div>
+									<div class="cal" role="grid" aria-label="Month calendar">
+										<div class="cal__weekdays">
+											<template x-for="day in track.weekdays" :key="day">
+												<span class="cal__weekday" x-text="day"></span>
+											</template>
+										</div>
+										<div class="cal__grid">
+											<template x-for="cell in track.calendarCells" :key="cell.key">
+												<button
+													type="button"
+													:class="calendarCellClass(cell)"
+													:disabled="cell.empty"
+													:aria-label="cell.label"
+													:aria-current="cell.isSelected ? 'date' : false"
+													@mouseenter="showDayPop($event, cell)"
+													@mouseleave="hideDayPop()"
+													@focus="showDayPop($event, cell)"
+													@blur="hideDayPop()"
+													@click="selectDay(cell.day)"
+												>
+													<span x-text="cell.dayNum"></span>
+												</button>
+											</template>
+										</div>
+									</div>
+								</div>
+							</section>
+
+							<p class="panel__hint" x-show="nothingDue">Nothing scheduled for this day.</p>
+
+							<ul class="habit-list" x-show="!nothingDue">
+								<template x-for="habit in track.habits" :key="habit.id">
+									<li :class="habitRowWrapClass(habit)">
+										<button
+											type="button"
+											:class="habitRowClass(habit)"
+											:aria-pressed="habit.done"
+											title="Complete habit"
+											aria-label="Complete habit"
+											@click="toggleHabit(habit.id)"
+										>
+											<span
+												class="habit-check"
+												:class="habit.done && 'habit-check--done'"
+												aria-hidden="true"
+											>
+												<svg
+													class="habit-check__icon"
+													viewBox="0 0 16 16"
+													width="16"
+													height="16"
+													focusable="false"
+												>
+													<path
+														class="habit-check__tick"
+														d="M3.5 8.2 6.6 11.3 12.5 4.7"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="square"
+														stroke-linejoin="miter"
+													/>
+												</svg>
+											</span>
+											<span class="habit-list__main">
+												<span class="habit-list__name" x-text="habit.name"></span>
+												<span
+													class="habit-list__meta"
+													x-show="habit.stackLabel"
+													x-text="habit.stackLabel"
+												></span>
+												<span
+													class="habit-list__meta"
+													x-show="!habit.stackLabel && habit.cue"
+													x-text="habit.cue"
+												></span>
+											</span>
+											<span class="habit-list__streak" x-text="habit.streakLabel"></span>
+										</button>
+										<button
+											type="button"
+											class="habit-list__edit"
+											title="Edit habit"
+											aria-label="Edit habit"
+											@click="startEdit(habit)"
+										>
+											<ds-icon name="edit" size="sm"></ds-icon>
+										</button>
+										<button
+											type="button"
+											class="habit-list__remove"
+											title="Remove habit"
+											aria-label="Remove habit"
+											@click="openRemoveDialog(habit)"
+										>
+											<ds-icon name="delete" size="sm"></ds-icon>
+										</button>
+									</li>
+								</template>
+							</ul>
+						</div>
+					</section>
+
+					<section class="panel" x-show="isCreate" aria-labelledby="create-title">
+						<button
+							type="button"
+							class="back-btn"
+							title="Back to Track"
+							aria-label="Back to Track"
+							@click="backToTrack()"
+						>
+							<ds-icon name="arrow_back" size="sm"></ds-icon>
+						</button>
+						<h1 id="create-title" class="panel__title" x-text="formTitle"></h1>
+						<p class="panel__lede">
+							Name a good habit, set how often it’s due, and optional cue or note.
+						</p>
+
+						<form class="habit-form" @submit.prevent="saveHabitForm()">
+							<label class="field">
+								<span class="field__label">Habit</span>
+								<input
+									class="field__input"
+									type="text"
+									name="habit-name"
+									autocomplete="off"
+									placeholder="Read 2 pages"
+									x-model="createName"
+									required
+								/>
+							</label>
+							<label class="field">
+								<span class="field__label">Cue <span class="field__optional">optional</span></span>
+								<input
+									class="field__input"
+									type="text"
+									name="habit-cue"
+									autocomplete="off"
+									placeholder="After morning coffee, at the desk"
+									x-model="createCue"
+								/>
+							</label>
+							<label class="field">
+								<span class="field__label">Note <span class="field__optional">optional</span></span>
+								<textarea
+									class="field__input field__input--area"
+									name="habit-note"
+									rows="3"
+									placeholder="2-minute version, stack, or identity line"
+									x-model="createNote"
+								></textarea>
+							</label>
+
+							<label class="field" x-show="hasStackOptions">
+								<span class="field__label"
+									>Stack after <span class="field__optional">optional</span></span
+								>
+								<select class="field__input" name="habit-stack" x-model="stackAfterId">
+									<option value="">No stack — starts on its own</option>
+									<template x-for="option in stackOptions" :key="option.id">
+										<option :value="option.id" x-text="option.name"></option>
+									</template>
+								</select>
+								<span class="field__help">After [habit], I will [this habit].</span>
+							</label>
+
+							<fieldset class="field schedule">
+								<legend class="field__label">Schedule</legend>
+								<div
+									class="pref-options pref-options--schedule"
+									role="radiogroup"
+									aria-label="Schedule"
+								>
+									<button
+										type="button"
+										class="pref-option"
+										:class="isScheduleDaily && 'pref-option--active'"
+										role="radio"
+										:aria-checked="isScheduleDaily"
+										@click="setScheduleKind('daily')"
+									>
+										<span class="pref-option__label">Every day</span>
+										<span class="pref-option__hint">Shows up on the Track list daily.</span>
+									</button>
+									<button
+										type="button"
+										class="pref-option"
+										:class="isScheduleWeekly && 'pref-option--active'"
+										role="radio"
+										:aria-checked="isScheduleWeekly"
+										@click="setScheduleKind('weekly')"
+									>
+										<span class="pref-option__label">Weekly</span>
+										<span class="pref-option__hint">Pick weekdays, or every other week.</span>
+									</button>
+									<button
+										type="button"
+										class="pref-option"
+										:class="isScheduleEveryNDays && 'pref-option--active'"
+										role="radio"
+										:aria-checked="isScheduleEveryNDays"
+										@click="setScheduleKind('every_n_days')"
+									>
+										<span class="pref-option__label">Every N days</span>
+										<span class="pref-option__hint">Every other day, every 3 days, …</span>
+									</button>
+								</div>
+
+								<div class="schedule__extra" x-show="isScheduleWeekly">
+									<p class="settings-panel__copy">Weekdays</p>
+									<div class="weekday-row" role="group" aria-label="Weekdays">
+										<template x-for="day in weekdayOptions" :key="day.label">
+											<button
+												type="button"
+												class="weekday-chip"
+												:class="isScheduleWeekdayOn(day.index) && 'weekday-chip--on'"
+												:aria-pressed="isScheduleWeekdayOn(day.index)"
+												@click="toggleScheduleWeekday(day.index)"
+												x-text="day.label"
+											></button>
+										</template>
+									</div>
+									<label class="field">
+										<span class="field__label">Repeat every</span>
+										<div class="field__inline">
+											<input
+												class="field__input field__input--narrow"
+												type="number"
+												min="1"
+												max="12"
+												x-model="scheduleIntervalWeeks"
+											/>
+											<span class="field__suffix">week(s)</span>
+										</div>
+										<span class="field__help"
+											>Use 2 for every other Monday (with Mon selected).</span
+										>
+									</label>
+								</div>
+
+								<div class="schedule__extra" x-show="isScheduleEveryNDays">
+									<label class="field">
+										<span class="field__label">Repeat every</span>
+										<div class="field__inline">
+											<input
+												class="field__input field__input--narrow"
+												type="number"
+												min="2"
+												max="365"
+												x-model="scheduleIntervalDays"
+											/>
+											<span class="field__suffix">days</span>
+										</div>
+									</label>
+								</div>
+							</fieldset>
+
+							<p class="setup__error" x-show="createError" x-text="createError" role="alert"></p>
+							<div class="panel__actions">
+								<button type="submit" class="ds-btn ds-btn--primary" :disabled="habitsBusy">
+									<span x-text="formSubmitLabel"></span>
+								</button>
+							</div>
+						</form>
+					</section>
+
 					<section class="panel" x-show="isStub" aria-labelledby="stub-title">
 						<p class="panel__eyebrow">Coming soon</p>
 						<h1 id="stub-title" class="panel__title" x-text="currentLabel"></h1>
@@ -284,6 +747,106 @@
 						</div>
 					</section>
 				</main>
+			</div>
+
+			<div
+				id="remove-dialog"
+				class="dialog"
+				x-show="removeDialogOpen"
+				x-cloak
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="remove-dialog-title"
+				tabindex="-1"
+				@dialog-escape="closeRemoveDialog()"
+			>
+				<button
+					type="button"
+					class="dialog__backdrop"
+					aria-label="Close dialog"
+					@click="closeRemoveDialog()"
+				></button>
+				<div class="dialog__panel">
+					<h2 id="remove-dialog-title" class="dialog__title">Remove habit?</h2>
+					<p class="dialog__copy">
+						<span x-text="removeDialogName"></span>
+						can be archived so past check-offs stay on your graphs, or deleted forever.
+					</p>
+					<p class="dialog__warn">Delete permanently is destructive and cannot be undone.</p>
+					<label class="field">
+						<span class="field__label"
+							>Archive note <span class="field__optional">optional</span></span
+						>
+						<textarea
+							class="field__input field__input--area"
+							rows="2"
+							placeholder="Why you’re setting this aside"
+							x-model="removeArchiveNote"
+						></textarea>
+					</label>
+					<div class="dialog__actions">
+						<button
+							type="button"
+							class="ds-btn"
+							data-dialog-initial-focus
+							:disabled="removeBusy"
+							@click="closeRemoveDialog()"
+						>
+							Keep habit
+						</button>
+						<button
+							type="button"
+							class="ds-btn ds-btn--primary"
+							:disabled="removeBusy"
+							@click="confirmArchiveHabit()"
+						>
+							Archive
+						</button>
+						<button
+							type="button"
+							class="ds-btn ds-btn--danger"
+							:disabled="removeBusy"
+							@click="confirmDeleteHabit()"
+						>
+							Delete permanently
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div
+				id="celebrate-toast"
+				class="celebrate"
+				x-show="celebrateOpen"
+				x-cloak
+				role="status"
+				aria-live="polite"
+			>
+				<p class="celebrate__title" x-text="celebrateMessage"></p>
+				<p class="celebrate__lede">Chain intact. See you tomorrow.</p>
+			</div>
+
+			<div
+				id="day-pop"
+				class="day-pop"
+				:class="dayPopReady && 'day-pop--ready'"
+				x-show="dayPop.open"
+				x-cloak
+				:style="dayPopStyle"
+				role="tooltip"
+			>
+				<p class="day-pop__title" x-text="dayPop.title"></p>
+				<p class="day-pop__summary" x-text="dayPopSummary"></p>
+				<ul class="day-pop__list" x-show="dayPopHasDone">
+					<template x-for="name in dayPop.doneNames" :key="name">
+						<li class="day-pop__item day-pop__item--done" x-text="name"></li>
+					</template>
+				</ul>
+				<ul class="day-pop__list" x-show="dayPopHasMissed">
+					<template x-for="name in dayPop.missedNames" :key="name">
+						<li class="day-pop__item day-pop__item--missed" x-text="name"></li>
+					</template>
+				</ul>
 			</div>
 		</div>
 

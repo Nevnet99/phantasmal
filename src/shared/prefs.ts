@@ -16,15 +16,27 @@ export const SETTINGS_CHANNELS = {
 	getPrefs: "settings:getPrefs",
 	setUiDensity: "settings:setUiDensity",
 	setUiTheme: "settings:setUiTheme",
+	setDailyReminder: "settings:setDailyReminder",
+} as const;
+
+export const REMINDER_CHANNELS = {
+	syncDueToday: "reminders:syncDueToday",
 } as const;
 
 export type AppPrefs = {
 	uiDensity: UiDensity;
 	uiTheme: UiTheme;
+	/** OS notification once per day when habits remain due. */
+	dailyReminder: boolean;
 };
 
 export type SettingsApi = {
 	getPrefs: () => Promise<AppPrefs>;
 	setUiDensity: (density: UiDensity) => Promise<AppPrefs>;
 	setUiTheme: (theme: UiTheme) => Promise<AppPrefs>;
+	setDailyReminder: (enabled: boolean) => Promise<AppPrefs>;
+};
+
+export type RemindersApi = {
+	syncDueToday: (remaining: number, today: string) => Promise<void>;
 };

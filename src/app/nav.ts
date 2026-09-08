@@ -7,6 +7,20 @@ export type NavItem = {
 	enabled: boolean;
 };
 
+const APP_ROUTES: readonly AppRoute[] = [
+	"home",
+	"track",
+	"create",
+	"break",
+	"journal",
+	"identity",
+	"settings",
+];
+
+export function isAppRoute(id: string): id is AppRoute {
+	return (APP_ROUTES as readonly string[]).includes(id);
+}
+
 /** Sidebar + home overview. Unfinished features open stub screens. */
 export const NAV_ITEMS: NavItem[] = [
 	{
@@ -19,13 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
 		id: "track",
 		label: "Track",
 		blurb: "Daily check-ins and streaks. Keep the chain intact.",
-		enabled: false,
-	},
-	{
-		id: "create",
-		label: "Create",
-		blurb: "Design good habits with the Four Laws, stacking, and the 2-minute rule.",
-		enabled: false,
+		enabled: true,
 	},
 	{
 		id: "break",

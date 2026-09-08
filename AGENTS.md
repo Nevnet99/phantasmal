@@ -22,16 +22,20 @@ After vault setup, the app uses a sidebar + main layout. Routes live in
 `src/app/nav.ts`. Unfinished features stay reachable as stub screens and show a
 Soon badge. Home lists every section with a short blurb.
 
-Geist Variable for UI/display, Geist Mono for paths and meta (same loading approach as lukebrannagan-3).
+Geist Variable for UI/display, Geist Mono for paths and meta, Material Symbols
+Outlined Variable for icons (same self-hosted `@fontsource-variable` approach).
 
-- **Design system:** Lit web components under `src/design-system/`
+- **Design system:** Lit web components under `src/design-system/` (`ds-button`,
+  `ds-icon`, `ds-toggle`, …)
 - **App screens:** Alpine.js + HTML (`index.html`, `src/app/`) — keep app JS thin
 - Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
 - First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app`.
-- **Settings** (sidebar): tabs for **UI** (theme + layout density) and **Vault** (path / move / open).
+- **Settings** (sidebar): tabs for **UI** (theme + layout density), **Habits**
+  (daily reminder + archived browse/restore), and **Vault** (path / move / open).
 - Default chrome is **compact** (0 radius, tight spacing) and **dark**. Prefs are stored per machine in
-  `userData/config.json` as `uiDensity` (`compact` | `comfortable` | `roomy`) and
-  `uiTheme` (`dark` | `light` | `system`).
+  `userData/config.json` as `uiDensity` (`compact` | `comfortable` | `roomy`),
+  `uiTheme` (`dark` | `light` | `system`), and `dailyReminder` (boolean; once-per-day
+  OS notification when habits remain due). Dock/taskbar badge shows remaining due today.
 
 ## Data vault
 
@@ -41,8 +45,24 @@ The vault is a folder of files (Obsidian-style), not a SQLite database:
 Vault/
   phantasmal.json
   habits/
+    morning-run-a1b2c3.json
   journal/
 ```
+
+Each habit is one JSON file under `habits/` (name, cue, note, schedule, completion days,
+optional archive metadata).
+**Track** covers today’s list, month calendar, contribution graph, and check-offs.
+Add habits with **New habit**; edit with the **Edit** control beside each row.
+Click the habit card to complete it. **Remove** opens a dialog to archive (keeps graph
+history, optional note) or delete permanently. Browse and restore archived habits under
+Settings → Habits. The remove dialog traps focus and closes on Escape.
+
+Schedules: `daily`, `weekly` (weekdays + interval weeks, e.g. every other Monday), or
+`every_n_days`. Track only lists habits due on the selected day; streaks count consecutive
+due days.
+
+Habit stacking: set `stackAfterId` (“After X, I will Y”). Track groups stacks in order and
+indents stacked habits.
 
 Choose the folder during setup or later under Settings → Vault. Point both machines at
 the same synced folder (Google Drive, Dropbox, etc.). Each machine only stores that path
