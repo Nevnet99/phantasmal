@@ -20,7 +20,8 @@
 			"@ds": ["src/design-system/index.ts"],
 			"@ds/*": ["src/design-system/*"],
 			"@components/*": ["src/components/*"],
-			"@lib/*": ["src/lib/*"]
+			"@lib/*": ["src/lib/*"],
+			"@shared/*": ["src/shared/*"]
 		}
 	},
 	"include": ["src/**/*.ts", "electron/**/*.ts", "vite.config.ts", "vitest.config.ts"]

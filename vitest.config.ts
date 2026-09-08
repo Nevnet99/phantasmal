@@ -11,10 +11,11 @@ export default defineConfig({
 			"@ds": path.resolve(rootDir, "src/design-system/index.ts"),
 			"@components": path.resolve(rootDir, "src/components"),
 			"@lib": path.resolve(rootDir, "src/lib"),
+			"@shared": path.resolve(rootDir, "src/shared"),
 		},
 	},
 	test: {
 		environment: "node",
-		include: ["src/**/*.{test,spec}.{ts,js}"],
+		include: ["src/**/*.{test,spec}.{ts,js}", "electron/**/*.{test,spec}.{ts,js}"],
 	},
 });

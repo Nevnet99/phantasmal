@@ -20,9 +20,11 @@
 		"check": "bun run lint && bun run format:check && bun run test && bun run build"
 	},
 	"dependencies": {
+		"@alpinejs/csp": "^3.17.2",
 		"lit": "^3.3.1"
 	},
 	"devDependencies": {
+		"@types/alpinejs": "^3.13.11",
 		"@types/node": "^22.15.29",
 		"electron": "^36.3.2",
 		"oxlint": "^0.16.12",

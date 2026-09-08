@@ -1,16 +1,22 @@
+@import "./buttons.css";
+
 :root {
 	--color-ground: #1a1f1c;
 	--color-ink: #e8efe6;
 	--color-muted: #9aab9e;
 	--color-line: #2f3a33;
+	--color-accent: #8fbc8f;
 	--font-display: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
 	--font-body: "Segoe UI", "Helvetica Neue", sans-serif;
 	--text-display: clamp(2.5rem, 5vw, 3.75rem);
 	--text-body: 1.125rem;
 	--text-caption: 0.75rem;
 	--space-xs: 0.35rem;
+	--space-sm: 0.65rem;
+	--space-md: 1rem;
 	--space-lg: 1.5rem;
 	--space-xl: 2.5rem;
+	--radius-sm: 0.4rem;
 	--radius-md: 0.75rem;
 }
 

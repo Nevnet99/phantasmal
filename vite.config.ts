@@ -10,6 +10,7 @@ const alias = {
 	"@ds": path.resolve(rootDir, "src/design-system/index.ts"),
 	"@components": path.resolve(rootDir, "src/components"),
 	"@lib": path.resolve(rootDir, "src/lib"),
+	"@shared": path.resolve(rootDir, "src/shared"),
 };
 
 export default defineConfig({
@@ -20,6 +21,13 @@ export default defineConfig({
 		electron({
 			main: {
 				entry: "electron/main.ts",
+				vite: {
+					build: {
+						rollupOptions: {
+							external: ["electron"],
+						},
+					},
+				},
 			},
 			preload: {
 				input: "electron/preload.ts",

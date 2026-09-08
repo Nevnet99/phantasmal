@@ -1,8 +1,17 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { openConfiguredVault, registerVaultIpc } from "./ipc";
+import { closeVault } from "./vault/fs-vault";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function getPaths() {
+	return {
+		userData: app.getPath("userData"),
+		documents: app.getPath("documents"),
+	};
+}
 
 function createWindow() {
 	const win = new BrowserWindow({
@@ -24,6 +33,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+	registerVaultIpc(getPaths);
+	openConfiguredVault(getPaths());
 	createWindow();
 
 	app.on("activate", () => {
@@ -37,4 +48,8 @@ app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") {
 		app.quit();
 	}
+});
+
+app.on("before-quit", () => {
+	closeVault();
 });

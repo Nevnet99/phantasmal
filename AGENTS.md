@@ -16,16 +16,33 @@ Run the full quality gate before committing:
 bun run check
 ```
 
-## Stack
+## UI stack
 
-- Electron + Lit + TypeScript
-- Bun package manager
-- oxlint + Prettier
-- Vitest
+- **Design system:** Lit web components under `src/design-system/`
+- **App screens:** Alpine.js + HTML (`index.html`, `src/app/`) — keep app JS thin
+- Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
+- First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app`.
+
+## Data vault
+
+The vault is a folder of files (Obsidian-style), not a SQLite database:
+
+```
+Vault/
+  phantasmal.json
+  habits/
+  journal/
+```
+
+Choose the folder in the UI. Point both machines at the same synced folder
+(Google Drive, Dropbox, etc.). Each machine only stores that path in
+`userData/config.json`. Habits and journal entries will be separate files so
+cloud sync can merge edits from either machine.
 
 ## Documentation
 
-- [Lit](https://lit.dev/docs/)
+- [Lit](https://lit.dev/docs/) (design system)
+- [Alpine.js](https://alpinejs.dev/) (app UI)
 - [Electron](https://www.electronjs.org/docs/latest)
 - [Vite](https://vite.dev/guide/)
 - [oxlint](https://oxc.rs/docs/guide/usage/linter.html)
