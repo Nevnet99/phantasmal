@@ -1,3 +1,4 @@
+@import "./fonts.css";
 @import "./buttons.css";
 
 :root {
@@ -6,8 +7,9 @@
 	--color-muted: #9aab9e;
 	--color-line: #2f3a33;
 	--color-accent: #8fbc8f;
-	--font-display: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
-	--font-body: "Segoe UI", "Helvetica Neue", sans-serif;
+	--font-display: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
+	--font-body: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
+	--font-mono: "Geist Mono Variable", "Geist Mono Fallback", ui-monospace, monospace;
 	--text-display: clamp(2.5rem, 5vw, 3.75rem);
 	--text-body: 1.125rem;
 	--text-caption: 0.75rem;
