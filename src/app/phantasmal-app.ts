@@ -7,6 +7,7 @@ import type {
 	Weekday,
 } from "@/shared/habits";
 import { WEEKDAY_LABELS } from "@/shared/habits";
+import type { IdentityHabitOption, IdentityView } from "@/shared/identity";
 import type { VaultStatus } from "@/shared/vault";
 import type { AppPrefs, UiDensity, UiTheme } from "@/shared/prefs";
 import { formatDayLabel, localDayKey, parseDayKey } from "@/lib/day";
@@ -119,6 +120,7 @@ function emptyTrack(): TrackSnapshot {
 		totalCount: 0,
 		habits: [],
 		remaining: [],
+		groups: [],
 		graph: [],
 		weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
 		calendarMonthLabel: "",
@@ -154,6 +156,7 @@ type PhantasmalApp = {
 	celebrateMessage: string;
 	celebrateTimer: number;
 	removeDialogOpen: boolean;
+	removeDialogKind: "habit" | "identity";
 	removeDialogId: string;
 	removeDialogName: string;
 	removeArchiveNote: string;
@@ -172,19 +175,40 @@ type PhantasmalApp = {
 	scheduleAnchorDay: string;
 	weekdayLabels: readonly string[];
 	weekdayOptions: { index: number; label: string }[];
+	identities: IdentityView[];
+	archivedIdentities: IdentityView[];
+	identityHabitOptions: IdentityHabitOption[];
+	identitiesBusy: boolean;
+	identityError: string;
+	identityEditingId: string | null;
+	identityBody: string;
+	identityNote: string;
+	identityHabitIds: string[];
+	identityBusy: boolean;
 	navItems: NavItem[];
 	get isLoading(): boolean;
 	get isWelcome(): boolean;
 	get isSetup(): boolean;
 	get isApp(): boolean;
-	get isHome(): boolean;
 	get isTrack(): boolean;
 	get isCreate(): boolean;
+	get isIdentity(): boolean;
 	get isSettings(): boolean;
 	get isSettingsUi(): boolean;
 	get isSettingsVault(): boolean;
 	get isSettingsHabits(): boolean;
 	get hasArchivedHabits(): boolean;
+	get hasArchivedIdentities(): boolean;
+	get identityEmpty(): boolean;
+	get removeDialogTitle(): string;
+	get removeDialogCopy(): string;
+	get removeDialogKeepLabel(): string;
+	get isRemoveHabit(): boolean;
+	get isRemoveIdentity(): boolean;
+	get hasIdentityHabitOptions(): boolean;
+	get isIdentityEditing(): boolean;
+	get identityFormTitle(): string;
+	get identitySubmitLabel(): string;
 	get isStub(): boolean;
 	get isDensityCompact(): boolean;
 	get isDensityComfortable(): boolean;
@@ -264,12 +288,26 @@ type PhantasmalApp = {
 	saveHabitForm(): Promise<void>;
 	createHabit(): Promise<void>;
 	toggleHabit(id: string): Promise<void>;
+	moveStack(id: string, direction: "up" | "down"): Promise<void>;
 	openRemoveDialog(habit: HabitView): void;
+	openIdentityRemoveDialog(identity: IdentityView): void;
 	closeRemoveDialog(): void;
 	confirmArchiveHabit(): Promise<void>;
+	confirmArchiveIdentity(): Promise<void>;
 	confirmDeleteHabit(): Promise<void>;
+	confirmDeleteIdentity(): Promise<void>;
 	celebrateTodayComplete(): void;
 	dismissCelebrate(): void;
+	refreshIdentities(): Promise<void>;
+	refreshArchivedIdentities(): Promise<void>;
+	restoreArchivedIdentity(id: string): Promise<void>;
+	resetIdentityForm(): void;
+	startIdentityEdit(identity: IdentityView): void;
+	cancelIdentityEdit(): void;
+	toggleIdentityHabit(id: string): void;
+	isIdentityHabitLinked(id: string): boolean;
+	identityHabitOptionClass(option: IdentityHabitOption): string;
+	saveIdentityForm(): Promise<void>;
 	chooseFolder(): Promise<void>;
 	openExisting(): Promise<void>;
 	reveal(): Promise<void>;
@@ -291,7 +329,7 @@ export function phantasmalApp(): PhantasmalApp {
 	const initial = emptyTrack();
 	return {
 		screen: "loading",
-		route: "home",
+		route: "track",
 		settingsTab: "ui",
 		uiDensity: "compact",
 		uiTheme: "dark",
@@ -315,6 +353,7 @@ export function phantasmalApp(): PhantasmalApp {
 		celebrateMessage: "",
 		celebrateTimer: 0,
 		removeDialogOpen: false,
+		removeDialogKind: "habit",
 		removeDialogId: "",
 		removeDialogName: "",
 		removeArchiveNote: "",
@@ -333,6 +372,16 @@ export function phantasmalApp(): PhantasmalApp {
 		scheduleAnchorDay: initial.todayKey,
 		weekdayLabels: WEEKDAY_LABELS,
 		weekdayOptions: WEEKDAY_LABELS.map((label, index) => ({ index, label })),
+		identities: [],
+		archivedIdentities: [],
+		identityHabitOptions: [],
+		identitiesBusy: false,
+		identityError: "",
+		identityEditingId: null,
+		identityBody: "",
+		identityNote: "",
+		identityHabitIds: [],
+		identityBusy: false,
 		navItems: NAV_ITEMS,
 
 		get isLoading() {
@@ -351,16 +400,16 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.screen === "app";
 		},
 
-		get isHome() {
-			return this.route === "home";
-		},
-
 		get isTrack() {
 			return this.route === "track";
 		},
 
 		get isCreate() {
 			return this.route === "create";
+		},
+
+		get isIdentity() {
+			return this.route === "identity";
 		},
 
 		get isSettings() {
@@ -381,6 +430,53 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get hasArchivedHabits() {
 			return this.archivedHabits.length > 0;
+		},
+
+		get hasArchivedIdentities() {
+			return this.archivedIdentities.length > 0;
+		},
+
+		get identityEmpty() {
+			return !this.identitiesBusy && this.identities.length === 0;
+		},
+
+		get removeDialogTitle() {
+			return this.removeDialogKind === "identity" ? "Remove identity?" : "Remove habit?";
+		},
+
+		get removeDialogCopy() {
+			if (this.removeDialogKind === "identity") {
+				return `${this.removeDialogName} can be archived so you can restore it later, or deleted forever.`;
+			}
+			return `${this.removeDialogName} can be archived so past check-offs stay on your graphs, or deleted forever.`;
+		},
+
+		get removeDialogKeepLabel() {
+			return this.removeDialogKind === "identity" ? "Keep identity" : "Keep habit";
+		},
+
+		get isRemoveHabit() {
+			return this.removeDialogKind === "habit";
+		},
+
+		get isRemoveIdentity() {
+			return this.removeDialogKind === "identity";
+		},
+
+		get hasIdentityHabitOptions() {
+			return this.identityHabitOptions.length > 0;
+		},
+
+		get isIdentityEditing() {
+			return Boolean(this.identityEditingId);
+		},
+
+		get identityFormTitle() {
+			return this.identityEditingId ? "Edit identity" : "New identity";
+		},
+
+		get identitySubmitLabel() {
+			return this.identityEditingId ? "Save changes" : "Add identity";
 		},
 
 		get isStub() {
@@ -575,7 +671,7 @@ export function phantasmalApp(): PhantasmalApp {
 
 			this.status = await api.getStatus();
 			this.screen = this.status.open ? "app" : "welcome";
-			this.route = "home";
+			this.route = "track";
 			if (this.status.open) {
 				await this.refreshHabits();
 			}
@@ -593,7 +689,7 @@ export function phantasmalApp(): PhantasmalApp {
 				this.status = await api.useDefaultLocation();
 				if (this.status.open) {
 					this.screen = "app";
-					this.route = "home";
+					this.route = "track";
 					await this.refreshHabits();
 				}
 			} finally {
@@ -604,7 +700,7 @@ export function phantasmalApp(): PhantasmalApp {
 		enterApp() {
 			if (this.status?.open) {
 				this.screen = "app";
-				this.route = "home";
+				this.route = "track";
 				void this.refreshHabits();
 			}
 		},
@@ -624,6 +720,10 @@ export function phantasmalApp(): PhantasmalApp {
 				this.todayLabel = formatDayLabel(this.todayKey);
 				void this.refreshHabits();
 			}
+			if (id === "identity") {
+				this.identityError = "";
+				void this.refreshIdentities();
+			}
 		},
 
 		backToTrack() {
@@ -639,6 +739,7 @@ export function phantasmalApp(): PhantasmalApp {
 			this.settingsTab = tab;
 			if (tab === "habits") {
 				void this.refreshArchivedHabits();
+				void this.refreshArchivedIdentities();
 			}
 		},
 
@@ -714,6 +815,33 @@ export function phantasmalApp(): PhantasmalApp {
 				this.archivedHabits = await api.listArchived();
 			} catch (error) {
 				this.habitsError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async refreshArchivedIdentities() {
+			const api = window.phantasmal?.identity;
+			if (!api) {
+				this.archivedIdentities = [];
+				return;
+			}
+			try {
+				this.archivedIdentities = await api.listArchived();
+			} catch (error) {
+				this.identityError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async restoreArchivedIdentity(id) {
+			const api = window.phantasmal?.identity;
+			if (!api) return;
+			this.identityError = "";
+			try {
+				await api.restore(id);
+				await this.refreshIdentities();
+				await this.refreshArchivedIdentities();
+				await this.refreshTrack();
+			} catch (error) {
+				this.identityError = error instanceof Error ? error.message : String(error);
 			}
 		},
 
@@ -1092,7 +1220,21 @@ export function phantasmalApp(): PhantasmalApp {
 			}
 		},
 
+		async moveStack(id, direction) {
+			const api = window.phantasmal?.habits;
+			if (!api) return;
+			this.habitsError = "";
+			try {
+				await api.moveStack(id, direction, this.selectedDay);
+				await this.refreshTrack();
+			} catch (error) {
+				this.habitsError = error instanceof Error ? error.message : String(error);
+				await this.refreshHabits();
+			}
+		},
+
 		openRemoveDialog(habit) {
+			this.removeDialogKind = "habit";
 			this.removeDialogId = habit.id;
 			this.removeDialogName = habit.name;
 			this.removeArchiveNote = "";
@@ -1109,10 +1251,28 @@ export function phantasmalApp(): PhantasmalApp {
 			});
 		},
 
+		openIdentityRemoveDialog(identity) {
+			this.removeDialogKind = "identity";
+			this.removeDialogId = identity.id;
+			this.removeDialogName = identity.statement;
+			this.removeArchiveNote = "";
+			this.removeBusy = false;
+			this.removeDialogOpen = true;
+			this.removeDialogFocus?.release();
+			this.removeDialogFocus = null;
+			requestAnimationFrame(() => {
+				const panel = document.getElementById("remove-dialog");
+				if (panel) {
+					this.removeDialogFocus = trapDialogFocus(panel);
+				}
+			});
+		},
+
 		closeRemoveDialog() {
 			this.removeDialogFocus?.release();
 			this.removeDialogFocus = null;
 			this.removeDialogOpen = false;
+			this.removeDialogKind = "habit";
 			this.removeDialogId = "";
 			this.removeDialogName = "";
 			this.removeArchiveNote = "";
@@ -1120,6 +1280,10 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		async confirmArchiveHabit() {
+			if (this.removeDialogKind === "identity") {
+				await this.confirmArchiveIdentity();
+				return;
+			}
 			const api = window.phantasmal?.habits;
 			if (!api || !this.removeDialogId) return;
 			this.removeBusy = true;
@@ -1138,7 +1302,30 @@ export function phantasmalApp(): PhantasmalApp {
 			}
 		},
 
+		async confirmArchiveIdentity() {
+			const api = window.phantasmal?.identity;
+			if (!api || !this.removeDialogId) return;
+			this.removeBusy = true;
+			this.identityError = "";
+			try {
+				await api.archive(this.removeDialogId, this.removeArchiveNote);
+				if (this.identityEditingId === this.removeDialogId) {
+					this.resetIdentityForm();
+				}
+				this.closeRemoveDialog();
+				await this.refreshIdentities();
+				await this.refreshTrack();
+			} catch (error) {
+				this.identityError = error instanceof Error ? error.message : String(error);
+				this.removeBusy = false;
+			}
+		},
+
 		async confirmDeleteHabit() {
+			if (this.removeDialogKind === "identity") {
+				await this.confirmDeleteIdentity();
+				return;
+			}
 			const api = window.phantasmal?.habits;
 			if (!api || !this.removeDialogId) return;
 			this.removeBusy = true;
@@ -1154,6 +1341,112 @@ export function phantasmalApp(): PhantasmalApp {
 			} catch (error) {
 				this.habitsError = error instanceof Error ? error.message : String(error);
 				this.removeBusy = false;
+			}
+		},
+
+		async confirmDeleteIdentity() {
+			const api = window.phantasmal?.identity;
+			if (!api || !this.removeDialogId) return;
+			this.removeBusy = true;
+			this.identityError = "";
+			try {
+				await api.remove(this.removeDialogId);
+				if (this.identityEditingId === this.removeDialogId) {
+					this.resetIdentityForm();
+				}
+				this.closeRemoveDialog();
+				await this.refreshIdentities();
+				await this.refreshTrack();
+			} catch (error) {
+				this.identityError = error instanceof Error ? error.message : String(error);
+				this.removeBusy = false;
+			}
+		},
+
+		async refreshIdentities() {
+			const api = window.phantasmal?.identity;
+			if (!api) {
+				this.identities = [];
+				this.archivedIdentities = [];
+				this.identityHabitOptions = [];
+				this.identityError = "Identity API is only available in the Electron app.";
+				return;
+			}
+			this.identitiesBusy = true;
+			this.identityError = "";
+			try {
+				const snap = await api.list();
+				this.identities = snap.identities;
+				this.identityHabitOptions = snap.habitOptions;
+			} catch (error) {
+				this.identityError = error instanceof Error ? error.message : String(error);
+			} finally {
+				this.identitiesBusy = false;
+			}
+		},
+
+		resetIdentityForm() {
+			this.identityEditingId = null;
+			this.identityBody = "";
+			this.identityNote = "";
+			this.identityHabitIds = [];
+			this.identityBusy = false;
+		},
+
+		startIdentityEdit(identity) {
+			this.identityEditingId = identity.id;
+			this.identityBody = identity.statement.replace(/^i\s+am\s+/i, "").trim();
+			this.identityNote = identity.note;
+			this.identityHabitIds = [...identity.habitIds];
+			this.identityError = "";
+		},
+
+		cancelIdentityEdit() {
+			this.resetIdentityForm();
+			this.identityError = "";
+		},
+
+		toggleIdentityHabit(id) {
+			if (this.identityHabitIds.includes(id)) {
+				this.identityHabitIds = this.identityHabitIds.filter((item) => item !== id);
+			} else {
+				this.identityHabitIds = [...this.identityHabitIds, id];
+			}
+		},
+
+		isIdentityHabitLinked(id) {
+			return this.identityHabitIds.includes(id);
+		},
+
+		identityHabitOptionClass(option) {
+			const parts = ["identity-habit"];
+			if (this.isIdentityHabitLinked(option.id)) parts.push("identity-habit--on");
+			if (option.archived) parts.push("identity-habit--archived");
+			return parts.join(" ");
+		},
+
+		async saveIdentityForm() {
+			const api = window.phantasmal?.identity;
+			if (!api) return;
+			this.identityBusy = true;
+			this.identityError = "";
+			const draft = {
+				statement: this.identityBody,
+				note: this.identityNote,
+				habitIds: [...this.identityHabitIds],
+			};
+			try {
+				if (this.identityEditingId) {
+					await api.update(this.identityEditingId, draft);
+				} else {
+					await api.create(draft);
+				}
+				this.resetIdentityForm();
+				await this.refreshIdentities();
+				await this.refreshTrack();
+			} catch (error) {
+				this.identityError = error instanceof Error ? error.message : String(error);
+				this.identityBusy = false;
 			}
 		},
 

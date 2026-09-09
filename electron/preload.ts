@@ -9,6 +9,13 @@ import {
 	type TrackSnapshot,
 } from "../src/shared/habits";
 import {
+	IDENTITY_CHANNELS,
+	type IdentityApi,
+	type IdentityDraft,
+	type IdentitySnapshot,
+	type IdentityView,
+} from "../src/shared/identity";
+import {
 	REMINDER_CHANNELS,
 	SETTINGS_CHANNELS,
 	type AppPrefs,
@@ -50,11 +57,27 @@ const habits: HabitsApi = {
 		ipcRenderer.invoke(HABIT_CHANNELS.update, id, draft, day) as Promise<HabitView>,
 	toggleDay: (id: string, day: DayKey) =>
 		ipcRenderer.invoke(HABIT_CHANNELS.toggleDay, id, day) as Promise<HabitView>,
+	moveStack: (id: string, direction: "up" | "down", day: DayKey) =>
+		ipcRenderer.invoke(HABIT_CHANNELS.moveStack, id, direction, day) as Promise<HabitView>,
 	archive: (id: string, note: string, day: DayKey) =>
 		ipcRenderer.invoke(HABIT_CHANNELS.archive, id, note, day) as Promise<HabitView>,
 	restore: (id: string, day: DayKey) =>
 		ipcRenderer.invoke(HABIT_CHANNELS.restore, id, day) as Promise<HabitView>,
 	remove: (id: string) => ipcRenderer.invoke(HABIT_CHANNELS.remove, id) as Promise<void>,
+};
+
+const identity: IdentityApi = {
+	list: () => ipcRenderer.invoke(IDENTITY_CHANNELS.list) as Promise<IdentitySnapshot>,
+	listArchived: () => ipcRenderer.invoke(IDENTITY_CHANNELS.listArchived) as Promise<IdentityView[]>,
+	create: (draft: IdentityDraft) =>
+		ipcRenderer.invoke(IDENTITY_CHANNELS.create, draft) as Promise<IdentityView>,
+	update: (id: string, draft: IdentityDraft) =>
+		ipcRenderer.invoke(IDENTITY_CHANNELS.update, id, draft) as Promise<IdentityView>,
+	archive: (id: string, note: string) =>
+		ipcRenderer.invoke(IDENTITY_CHANNELS.archive, id, note) as Promise<IdentityView>,
+	restore: (id: string) =>
+		ipcRenderer.invoke(IDENTITY_CHANNELS.restore, id) as Promise<IdentityView>,
+	remove: (id: string) => ipcRenderer.invoke(IDENTITY_CHANNELS.remove, id) as Promise<void>,
 };
 
 const reminders: RemindersApi = {
@@ -67,5 +90,6 @@ contextBridge.exposeInMainWorld("phantasmal", {
 	vault,
 	settings,
 	habits,
+	identity,
 	reminders,
 });

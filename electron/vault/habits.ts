@@ -12,10 +12,16 @@ import type {
 } from "../../src/shared/habits";
 import { buildTrackSnapshot, toHabitView, toHabitViews } from "../../src/lib/track-view";
 import { normalizeSchedule } from "../../src/lib/schedule";
-import { normalizeStackAfterId, wouldCreateStackCycle } from "../../src/lib/stack";
+import {
+	moveStackAmong,
+	normalizeStackAfterId,
+	normalizeStackOrder,
+	wouldCreateStackCycle,
+} from "../../src/lib/stack";
 import { isHabitActiveOn } from "../../src/lib/habit-status";
 import { HABITS_DIRNAME } from "./schema";
 import { getOpenVault, writeJsonAtomic } from "./fs-vault";
+import { loadActiveIdentities } from "./identity";
 
 function habitsDir(vaultPath: string): string {
 	return path.join(vaultPath, HABITS_DIRNAME);
@@ -64,6 +70,7 @@ function parseHabitRecord(value: unknown): HabitRecord | null {
 		note: record.note,
 		schedule: normalizeSchedule(record.schedule, fallbackAnchor),
 		stackAfterId: normalizeStackAfterId(record.stackAfterId),
+		stackOrder: normalizeStackOrder(record.stackOrder),
 		createdAt: record.createdAt,
 		updatedAt: record.updatedAt,
 		archivedAt: typeof record.archivedAt === "string" ? record.archivedAt : null,
@@ -118,6 +125,16 @@ function resolveStackAfterId(
 	return stackAfterId;
 }
 
+function nextStackOrder(habits: HabitRecord[], stackAfterId: string | null): number {
+	let max = -1;
+	for (const habit of habits) {
+		if (habit.archivedAt) continue;
+		if (habit.stackAfterId !== stackAfterId) continue;
+		if (habit.stackOrder > max) max = habit.stackOrder;
+	}
+	return max + 1;
+}
+
 export function loadHabits(): HabitRecord[] {
 	const vaultPath = requireOpenVaultPath();
 	const dir = habitsDir(vaultPath);
@@ -149,7 +166,19 @@ export function listArchivedHabits(day: DayKey = "1970-01-01"): HabitView[] {
 }
 
 export function getTrackSnapshot(query: TrackQuery): TrackSnapshot {
-	return buildTrackSnapshot(loadHabits(), query.selectedDay, query.month, query.year);
+	const identities = loadActiveIdentities().map((identity) => ({
+		id: identity.id,
+		statement: identity.statement,
+		habitIds: identity.habitIds,
+	}));
+	return buildTrackSnapshot(
+		loadHabits(),
+		query.selectedDay,
+		query.month,
+		query.year,
+		undefined,
+		identities,
+	);
 }
 
 export function createHabit(draft: HabitDraft, day: DayKey): HabitView {
@@ -172,6 +201,7 @@ export function createHabit(draft: HabitDraft, day: DayKey): HabitView {
 		note: (draft.note ?? "").trim(),
 		schedule,
 		stackAfterId,
+		stackOrder: nextStackOrder(existing, stackAfterId),
 		createdAt: now,
 		updatedAt: now,
 		archivedAt: null,
@@ -204,6 +234,13 @@ export function updateHabit(id: string, draft: HabitDraft, day: DayKey): HabitVi
 	const fallbackAnchor = habit.schedule.type === "daily" ? day : habit.schedule.anchorDay;
 	const schedule = scheduleFromDraft(draft, fallbackAnchor);
 	const stackAfterId = resolveStackAfterId(existing, id, draft);
+	const stackOrder =
+		stackAfterId === habit.stackAfterId
+			? habit.stackOrder
+			: nextStackOrder(
+					existing.filter((item) => item.id !== id),
+					stackAfterId,
+				);
 
 	const next: HabitRecord = {
 		...habit,
@@ -212,6 +249,7 @@ export function updateHabit(id: string, draft: HabitDraft, day: DayKey): HabitVi
 		note: (draft.note ?? "").trim(),
 		schedule,
 		stackAfterId,
+		stackOrder,
 		updatedAt: new Date().toISOString(),
 	};
 	writeHabit(vaultPath, next);
@@ -247,6 +285,29 @@ export function toggleHabitDay(id: string, day: DayKey): HabitView {
 	return toHabitView(next, day, byId);
 }
 
+export function moveStackHabit(id: string, direction: "up" | "down", day: DayKey): HabitView {
+	const vaultPath = requireOpenVaultPath();
+	const existing = loadHabits();
+	const moved = moveStackAmong(existing, id, direction);
+	const now = new Date().toISOString();
+	for (const habit of moved) {
+		const before = existing.find((item) => item.id === habit.id);
+		if (
+			!before ||
+			before.stackAfterId !== habit.stackAfterId ||
+			before.stackOrder !== habit.stackOrder
+		) {
+			writeHabit(vaultPath, { ...habit, updatedAt: now });
+		}
+	}
+	const byId = new Map(loadHabits().map((item) => [item.id, item]));
+	const next = byId.get(id);
+	if (!next) {
+		throw new Error("That habit file is missing or invalid.");
+	}
+	return toHabitView(next, day, byId);
+}
+
 export function archiveHabit(id: string, note: string, day: DayKey): HabitView {
 	const vaultPath = requireOpenVaultPath();
 	const filePath = habitFilePath(vaultPath, id);
@@ -260,7 +321,8 @@ export function archiveHabit(id: string, note: string, day: DayKey): HabitView {
 
 	const next: HabitRecord = {
 		...habit,
-		archivedAt: new Date().toISOString(),
+		// Stamp the selected local day so Track drops the habit from that day onward.
+		archivedAt: `${day}T12:00:00.000Z`,
 		archiveNote: note.trim(),
 		updatedAt: new Date().toISOString(),
 	};

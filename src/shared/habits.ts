@@ -7,6 +7,7 @@ export const HABIT_CHANNELS = {
 	create: "habits:create",
 	update: "habits:update",
 	toggleDay: "habits:toggleDay",
+	moveStack: "habits:moveStack",
 	archive: "habits:archive",
 	restore: "habits:restore",
 	remove: "habits:remove",
@@ -50,6 +51,8 @@ export type HabitRecord = {
 	schedule: HabitSchedule;
 	/** Stack after this habit id (“After X, I will Y”). */
 	stackAfterId: string | null;
+	/** Order among siblings that share the same stackAfterId (lower first). */
+	stackOrder: number;
 	createdAt: string;
 	updatedAt: string;
 	/** ISO timestamp when archived; null if active. */
@@ -80,6 +83,9 @@ export type HabitView = {
 	stackAfterName: string;
 	stackLabel: string;
 	stackDepth: number;
+	stackOrder: number;
+	canMoveUp: boolean;
+	canMoveDown: boolean;
 	due: boolean;
 	done: boolean;
 	streak: number;
@@ -88,6 +94,15 @@ export type HabitView = {
 	archivedAt: string;
 	archiveNote: string;
 	archivedLabel: string;
+};
+
+export type TrackGroup = {
+	key: string;
+	title: string;
+	identityId: string | null;
+	habits: HabitView[];
+	/** e.g. "2 votes still open today" — empty when done or ungrouped. */
+	votesOpenLabel: string;
 };
 
 export type GraphCell = {
@@ -134,6 +149,8 @@ export type TrackSnapshot = {
 	totalCount: number;
 	habits: HabitView[];
 	remaining: HabitView[];
+	/** Habits grouped by linked identity (stack families stay together). */
+	groups: TrackGroup[];
 	graph: GraphCell[];
 	weekdays: string[];
 	calendarMonthLabel: string;
@@ -149,6 +166,7 @@ export type HabitsApi = {
 	create: (draft: HabitDraft, day: DayKey) => Promise<HabitView>;
 	update: (id: string, draft: HabitDraft, day: DayKey) => Promise<HabitView>;
 	toggleDay: (id: string, day: DayKey) => Promise<HabitView>;
+	moveStack: (id: string, direction: "up" | "down", day: DayKey) => Promise<HabitView>;
 	archive: (id: string, note: string, day: DayKey) => Promise<HabitView>;
 	restore: (id: string, day: DayKey) => Promise<HabitView>;
 	remove: (id: string) => Promise<void>;

@@ -102,32 +102,11 @@
 				</aside>
 
 				<main id="main" class="shell__main">
-					<section class="panel" x-show="isHome" aria-labelledby="home-title">
-						<h1 id="home-title" class="panel__title">Home</h1>
-						<p class="panel__lede">
-							Overview of your systems. Open any section—areas still in progress show a Soon label
-							and a placeholder screen.
-						</p>
-
-						<ul class="overview">
-							<template x-for="item in navItems" :key="'card-' + item.id">
-								<li class="overview__item" x-show="item.id !== 'home'">
-									<button type="button" class="overview__card" @click="goTo(item.id)">
-										<span class="overview__card-top">
-											<span class="overview__card-title" x-text="item.label"></span>
-											<span class="overview__badge" x-show="!item.enabled">Soon</span>
-										</span>
-										<span class="overview__card-blurb" x-text="item.blurb"></span>
-									</button>
-								</li>
-							</template>
-						</ul>
-					</section>
-
 					<section class="panel" x-show="isSettings" aria-labelledby="settings-title">
 						<h1 id="settings-title" class="panel__title">Settings</h1>
 						<p class="panel__lede">
-							Theme, reminders, archived habits, and where your vault folder lives on this machine.
+							Theme, reminders, archived habits and identities, and where your vault folder lives on
+							this machine.
 						</p>
 
 						<div class="settings-tabs" role="tablist" aria-label="Settings sections">
@@ -323,6 +302,40 @@
 									</li>
 								</template>
 							</ul>
+
+							<h2 class="settings-panel__title">Archived identities</h2>
+							<p class="settings-panel__copy">
+								Archived identities leave Track grouping but keep their vote history. Restore to
+								bring one back.
+							</p>
+							<p class="panel__hint" x-show="!hasArchivedIdentities">No archived identities.</p>
+							<ul class="archive-list" x-show="hasArchivedIdentities">
+								<template x-for="identity in archivedIdentities" :key="identity.id">
+									<li class="archive-list__item">
+										<div class="archive-list__body">
+											<p class="archive-list__name" x-text="identity.statement"></p>
+											<p class="archive-list__meta">
+												Archived
+												<span x-text="identity.archivedLabel"></span>
+												·
+												<span x-text="identity.voteLabel"></span>
+											</p>
+											<p
+												class="archive-list__note"
+												x-show="identity.archiveNote"
+												x-text="identity.archiveNote"
+											></p>
+										</div>
+										<button
+											type="button"
+											class="ds-btn"
+											@click="restoreArchivedIdentity(identity.id)"
+										>
+											Restore
+										</button>
+									</li>
+								</template>
+							</ul>
 						</div>
 
 						<div
@@ -499,76 +512,112 @@
 
 							<p class="panel__hint" x-show="nothingDue">Nothing scheduled for this day.</p>
 
-							<ul class="habit-list" x-show="!nothingDue">
-								<template x-for="habit in track.habits" :key="habit.id">
-									<li :class="habitRowWrapClass(habit)">
-										<button
-											type="button"
-											:class="habitRowClass(habit)"
-											:aria-pressed="habit.done"
-											title="Complete habit"
-											aria-label="Complete habit"
-											@click="toggleHabit(habit.id)"
-										>
-											<span
-												class="habit-check"
-												:class="habit.done && 'habit-check--done'"
-												aria-hidden="true"
-											>
-												<svg
-													class="habit-check__icon"
-													viewBox="0 0 16 16"
-													width="16"
-													height="16"
-													focusable="false"
-												>
-													<path
-														class="habit-check__tick"
-														d="M3.5 8.2 6.6 11.3 12.5 4.7"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="square"
-														stroke-linejoin="miter"
-													/>
-												</svg>
-											</span>
-											<span class="habit-list__main">
-												<span class="habit-list__name" x-text="habit.name"></span>
-												<span
-													class="habit-list__meta"
-													x-show="habit.stackLabel"
-													x-text="habit.stackLabel"
-												></span>
-												<span
-													class="habit-list__meta"
-													x-show="!habit.stackLabel && habit.cue"
-													x-text="habit.cue"
-												></span>
-											</span>
-											<span class="habit-list__streak" x-text="habit.streakLabel"></span>
-										</button>
-										<button
-											type="button"
-											class="habit-list__edit"
-											title="Edit habit"
-											aria-label="Edit habit"
-											@click="startEdit(habit)"
-										>
-											<ds-icon name="edit" size="sm"></ds-icon>
-										</button>
-										<button
-											type="button"
-											class="habit-list__remove"
-											title="Remove habit"
-											aria-label="Remove habit"
-											@click="openRemoveDialog(habit)"
-										>
-											<ds-icon name="delete" size="sm"></ds-icon>
-										</button>
-									</li>
+							<div class="habit-groups" x-show="!nothingDue">
+								<template x-for="group in track.groups" :key="group.key">
+									<section class="habit-group">
+										<header class="habit-group__header" x-show="group.title">
+											<h2 class="habit-group__title" x-text="group.title"></h2>
+											<p
+												class="habit-group__prompt"
+												x-show="group.votesOpenLabel"
+												x-text="group.votesOpenLabel"
+											></p>
+										</header>
+										<ul class="habit-list">
+											<template x-for="habit in group.habits" :key="habit.id">
+												<li :class="habitRowWrapClass(habit)">
+													<div class="habit-list__stack-moves">
+														<button
+															type="button"
+															class="habit-list__move"
+															title="Move up in stack"
+															aria-label="Move up in stack"
+															:disabled="!habit.canMoveUp"
+															@click="moveStack(habit.id, 'up')"
+														>
+															<ds-icon name="keyboard_arrow_up" size="sm"></ds-icon>
+														</button>
+														<button
+															type="button"
+															class="habit-list__move"
+															title="Move down in stack"
+															aria-label="Move down in stack"
+															:disabled="!habit.canMoveDown"
+															@click="moveStack(habit.id, 'down')"
+														>
+															<ds-icon name="keyboard_arrow_down" size="sm"></ds-icon>
+														</button>
+													</div>
+													<button
+														type="button"
+														:class="habitRowClass(habit)"
+														:aria-pressed="habit.done"
+														title="Complete habit"
+														aria-label="Complete habit"
+														@click="toggleHabit(habit.id)"
+													>
+														<span
+															class="habit-check"
+															:class="habit.done && 'habit-check--done'"
+															aria-hidden="true"
+														>
+															<svg
+																class="habit-check__icon"
+																viewBox="0 0 16 16"
+																width="16"
+																height="16"
+																focusable="false"
+															>
+																<path
+																	class="habit-check__tick"
+																	d="M3.5 8.2 6.6 11.3 12.5 4.7"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="square"
+																	stroke-linejoin="miter"
+																/>
+															</svg>
+														</span>
+														<span class="habit-list__main">
+															<span class="habit-list__name" x-text="habit.name"></span>
+															<span
+																class="habit-list__meta"
+																x-show="habit.stackLabel"
+																x-text="habit.stackLabel"
+															></span>
+															<span
+																class="habit-list__meta"
+																x-show="!habit.stackLabel && habit.cue"
+																x-text="habit.cue"
+															></span>
+														</span>
+														<span class="habit-list__streak" x-text="habit.streakLabel"></span>
+													</button>
+													<button
+														type="button"
+														class="habit-list__edit"
+														title="Edit habit"
+														aria-label="Edit habit"
+														@click="startEdit(habit)"
+													>
+														<ds-icon name="edit" size="sm"></ds-icon>
+													</button>
+													<button
+														type="button"
+														class="habit-list__remove"
+														title="Remove habit"
+														aria-label="Remove habit"
+														@click="openRemoveDialog(habit)"
+													>
+														<ds-icon name="delete" size="sm"></ds-icon>
+													</button>
+												</li>
+											</template>
+										</ul>
+									</section>
 								</template>
-							</ul>
+							</div>
 						</div>
 					</section>
 
@@ -735,6 +784,144 @@
 						</form>
 					</section>
 
+					<section
+						class="panel panel--wide identity"
+						x-show="isIdentity"
+						aria-labelledby="identity-title"
+					>
+						<header class="identity__header">
+							<div class="identity__heading">
+								<h1 id="identity-title" class="panel__title">Identity</h1>
+								<p class="panel__lede">
+									Every action is a vote for the type of person you want to become. Name that
+									person, then link the habits that cast the votes.
+								</p>
+							</div>
+						</header>
+
+						<p class="setup__error" x-show="identityError" x-text="identityError" role="alert"></p>
+
+						<form class="habit-form identity__form" @submit.prevent="saveIdentityForm()">
+							<h2 class="identity__form-title" x-text="identityFormTitle"></h2>
+							<label class="field">
+								<span class="field__label">I am</span>
+								<input
+									class="field__input"
+									type="text"
+									name="identity-body"
+									autocomplete="off"
+									placeholder="a writer"
+									x-model="identityBody"
+									required
+								/>
+								<span class="field__help">Start from the identity, not the outcome.</span>
+							</label>
+							<label class="field">
+								<span class="field__label"
+									>Why it matters <span class="field__optional">optional</span></span
+								>
+								<textarea
+									class="field__input field__input--area"
+									name="identity-note"
+									rows="2"
+									placeholder="Who this person is when nobody is watching"
+									x-model="identityNote"
+								></textarea>
+							</label>
+
+							<fieldset class="field" x-show="hasIdentityHabitOptions">
+								<legend class="field__label">
+									Habits that cast votes <span class="field__optional">optional</span>
+								</legend>
+								<p class="field__help">
+									Check-offs on linked habits count as votes for this identity.
+								</p>
+								<div class="identity-habits">
+									<template x-for="option in identityHabitOptions" :key="option.id">
+										<button
+											type="button"
+											:class="identityHabitOptionClass(option)"
+											:aria-pressed="isIdentityHabitLinked(option.id)"
+											@click="toggleIdentityHabit(option.id)"
+										>
+											<span class="identity-habit__name" x-text="option.name"></span>
+											<span class="identity-habit__tag" x-show="option.archived">Archived</span>
+										</button>
+									</template>
+								</div>
+							</fieldset>
+							<p class="panel__hint" x-show="!hasIdentityHabitOptions">
+								Create a habit in Track first, then link it here so completions become votes.
+							</p>
+
+							<div class="panel__actions">
+								<button type="submit" class="ds-btn ds-btn--primary" :disabled="identityBusy">
+									<span x-text="identitySubmitLabel"></span>
+								</button>
+								<button
+									type="button"
+									class="ds-btn"
+									x-show="isIdentityEditing"
+									:disabled="identityBusy"
+									@click="cancelIdentityEdit()"
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+
+						<p class="panel__hint" x-show="identityEmpty">
+							No identities yet. Add one above to start casting votes.
+						</p>
+
+						<ul class="identity-list" x-show="!identityEmpty">
+							<template x-for="identity in identities" :key="identity.id">
+								<li class="identity-card">
+									<div class="identity-card__body">
+										<p class="identity-card__statement" x-text="identity.statement"></p>
+										<p class="identity-card__votes" x-text="identity.voteLabel"></p>
+										<p
+											class="identity-card__period"
+											x-show="identity.periodLabel"
+											x-text="identity.periodLabel"
+										></p>
+										<p class="identity-card__linked" x-text="identity.linkedLabel"></p>
+										<p
+											class="identity-card__note"
+											x-show="identity.note"
+											x-text="identity.note"
+										></p>
+										<ul class="identity-evidence" x-show="identity.hasEvidence">
+											<template x-for="row in identity.evidence" :key="row.day + row.habitName">
+												<li class="identity-evidence__item" x-text="row.label"></li>
+											</template>
+										</ul>
+									</div>
+									<div class="identity-card__actions">
+										<button
+											type="button"
+											class="habit-list__edit"
+											title="Edit"
+											aria-label="Edit identity"
+											@click="startIdentityEdit(identity)"
+										>
+											<ds-icon name="edit" size="sm"></ds-icon>
+										</button>
+										<button
+											type="button"
+											class="habit-list__remove"
+											title="Remove"
+											aria-label="Remove identity"
+											@click="openIdentityRemoveDialog(identity)"
+										>
+											<ds-icon name="delete" size="sm"></ds-icon>
+										</button>
+									</div>
+								</li>
+							</template>
+						</ul>
+					</section>
+
 					<section class="panel" x-show="isStub" aria-labelledby="stub-title">
 						<p class="panel__eyebrow">Coming soon</p>
 						<h1 id="stub-title" class="panel__title" x-text="currentLabel"></h1>
@@ -743,7 +930,7 @@
 							This screen is a placeholder so the shell stays ready while the feature is built.
 						</p>
 						<div class="panel__actions">
-							<button type="button" class="ds-btn" @click="goTo('home')">Back to Home</button>
+							<button type="button" class="ds-btn" @click="goTo('track')">Back to Track</button>
 						</div>
 					</section>
 				</main>
@@ -767,11 +954,8 @@
 					@click="closeRemoveDialog()"
 				></button>
 				<div class="dialog__panel">
-					<h2 id="remove-dialog-title" class="dialog__title">Remove habit?</h2>
-					<p class="dialog__copy">
-						<span x-text="removeDialogName"></span>
-						can be archived so past check-offs stay on your graphs, or deleted forever.
-					</p>
+					<h2 id="remove-dialog-title" class="dialog__title" x-text="removeDialogTitle"></h2>
+					<p class="dialog__copy" x-text="removeDialogCopy"></p>
 					<p class="dialog__warn">Delete permanently is destructive and cannot be undone.</p>
 					<label class="field">
 						<span class="field__label"
@@ -791,9 +975,8 @@
 							data-dialog-initial-focus
 							:disabled="removeBusy"
 							@click="closeRemoveDialog()"
-						>
-							Keep habit
-						</button>
+							x-text="removeDialogKeepLabel"
+						></button>
 						<button
 							type="button"
 							class="ds-btn ds-btn--primary"

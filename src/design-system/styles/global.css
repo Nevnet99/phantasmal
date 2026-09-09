@@ -20,7 +20,7 @@
 	--control-pad-y: 0.4rem;
 	--control-pad-x: 0.7rem;
 	--sidebar-width: 13rem;
-	--nav-min-height: 2rem;
+	--nav-min-height: 1.65rem;
 	/* Dark theme (default) */
 	--color-ground: #1a1f1c;
 	--color-ink: #e8efe6;
@@ -50,7 +50,7 @@
 	--control-pad-y: 0.5rem;
 	--control-pad-x: 0.85rem;
 	--sidebar-width: 14.5rem;
-	--nav-min-height: 2.35rem;
+	--nav-min-height: 1.9rem;
 }
 
 [data-density="roomy"] {
@@ -64,7 +64,7 @@
 	--control-pad-y: 0.55rem;
 	--control-pad-x: 0.95rem;
 	--sidebar-width: 15.5rem;
-	--nav-min-height: 2.5rem;
+	--nav-min-height: 2.1rem;
 }
 
 *,

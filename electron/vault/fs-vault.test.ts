@@ -6,6 +6,7 @@ import { closeVault, getOpenVault, looksLikeVault, openVaultAt, writeJsonAtomic 
 import {
 	CURRENT_VAULT_VERSION,
 	HABITS_DIRNAME,
+	IDENTITY_DIRNAME,
 	JOURNAL_DIRNAME,
 	VAULT_META_FILENAME,
 } from "./schema";
@@ -34,6 +35,7 @@ describe("fs vault", () => {
 		expect(fs.existsSync(path.join(vaultDir, VAULT_META_FILENAME))).toBe(true);
 		expect(fs.existsSync(path.join(vaultDir, HABITS_DIRNAME))).toBe(true);
 		expect(fs.existsSync(path.join(vaultDir, JOURNAL_DIRNAME))).toBe(true);
+		expect(fs.existsSync(path.join(vaultDir, IDENTITY_DIRNAME))).toBe(true);
 		expect(getOpenVault()?.path).toBe(vaultDir);
 		expect(looksLikeVault(vaultDir)).toBe(true);
 	});
