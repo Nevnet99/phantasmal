@@ -61,6 +61,26 @@ describe("track-view", () => {
 		expect(today?.missedNames).toEqual(["B"]);
 	});
 
+	it("starts counting a habit on the graph from its created day", () => {
+		const habits = [
+			habit({
+				id: "new",
+				name: "New",
+				createdAt: "2026-09-08T12:00:00.000Z",
+				completions: [],
+			}),
+		];
+		const snap = buildTrackSnapshot(habits, "2026-09-08", 9, 2026, "2026-09-08");
+		const before = snap.graph.find((item) => item.day === "2026-09-07");
+		const created = snap.graph.find((item) => item.day === "2026-09-08");
+		expect(before?.total).toBe(0);
+		expect(before?.missedNames).toEqual([]);
+		expect(created?.total).toBe(1);
+		expect(created?.missedNames).toEqual(["New"]);
+		expect(snap.calendarCells.find((cell) => cell.day === "2026-09-07")?.total).toBe(0);
+		expect(snap.calendarCells.find((cell) => cell.day === "2026-09-08")?.total).toBe(1);
+	});
+
 	it("summarizes remaining habits for today", () => {
 		const habits = [
 			habit({ id: "a", name: "A", completions: ["2026-09-08"] }),

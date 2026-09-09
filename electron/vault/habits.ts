@@ -190,6 +190,7 @@ export function createHabit(draft: HabitDraft, day: DayKey): HabitView {
 
 	const existing = loadHabits();
 	const now = new Date().toISOString();
+	const createdAt = `${day}T12:00:00.000Z`;
 	const schedule = scheduleFromDraft(draft, day);
 	const id = newHabitId(name);
 	const stackAfterId = resolveStackAfterId(existing, id, draft);
@@ -202,7 +203,7 @@ export function createHabit(draft: HabitDraft, day: DayKey): HabitView {
 		schedule,
 		stackAfterId,
 		stackOrder: nextStackOrder(existing, stackAfterId),
-		createdAt: now,
+		createdAt,
 		updatedAt: now,
 		archivedAt: null,
 		archiveNote: "",

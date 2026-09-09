@@ -26,6 +26,13 @@ describe("habit-status", () => {
 		expect(isHabitActiveOn(habit(), "2026-09-08")).toBe(true);
 	});
 
+	it("ignores days before the habit was created", () => {
+		const created = habit({ createdAt: "2026-09-08T12:00:00.000Z" });
+		expect(isHabitActiveOn(created, "2026-09-07")).toBe(false);
+		expect(isHabitActiveOn(created, "2026-09-08")).toBe(true);
+		expect(isHabitActiveOn(created, "2026-09-09")).toBe(true);
+	});
+
 	it("stops counting on and after the archive day", () => {
 		const archived = habit({ archivedAt: "2026-09-08T15:00:00.000Z" });
 		expect(isHabitArchived(archived)).toBe(true);
