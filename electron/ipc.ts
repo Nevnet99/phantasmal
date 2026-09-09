@@ -34,6 +34,16 @@ import {
 	updateIdentity,
 } from "./vault/identity";
 import {
+	archiveBreak,
+	createBreak,
+	listArchivedBreaks,
+	listBreaks,
+	removeBreak,
+	restoreBreak,
+	toggleBreakCleanDay,
+	updateBreak,
+} from "./vault/breaks";
+import {
 	getJournal,
 	listJournalSummaries,
 	removeJournal,
@@ -50,6 +60,7 @@ import {
 	type UiTheme,
 } from "../src/shared/prefs";
 import { HABIT_CHANNELS, isDayKey, isTrackQuery, type HabitDraft } from "../src/shared/habits";
+import { BREAK_CHANNELS, isBreakDraft } from "../src/shared/break";
 import { IDENTITY_CHANNELS, isIdentityDraft } from "../src/shared/identity";
 import { JOURNAL_CHANNELS, isJournalDraft, isJournalGetQuery } from "../src/shared/journal";
 import { VAULT_CHANNELS, type VaultStatus } from "../src/shared/vault";
@@ -425,6 +436,58 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 			throw new Error("Invalid remove request.");
 		}
 		removeIdentity(id);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.list, (_event, day: unknown) => {
+		if (day !== undefined && !isDayKey(day)) {
+			throw new Error("Invalid day.");
+		}
+		return listBreaks(typeof day === "string" ? day : undefined);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.listArchived, () => listArchivedBreaks());
+
+	ipcMain.handle(BREAK_CHANNELS.create, (_event, draft: unknown, day: unknown) => {
+		if (!isBreakDraft(draft) || !isDayKey(day)) {
+			throw new Error("Invalid break draft.");
+		}
+		return createBreak(draft, day);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.update, (_event, id: unknown, draft: unknown, day: unknown) => {
+		if (typeof id !== "string" || !isBreakDraft(draft) || !isDayKey(day)) {
+			throw new Error("Invalid break update.");
+		}
+		return updateBreak(id, draft, day);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.toggleCleanDay, (_event, id: unknown, day: unknown) => {
+		if (typeof id !== "string" || !isDayKey(day)) {
+			throw new Error("Invalid clean-day toggle.");
+		}
+		return toggleBreakCleanDay(id, day);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.archive, (_event, id: unknown, note: unknown, day: unknown) => {
+		if (typeof id !== "string" || typeof note !== "string" || !isDayKey(day)) {
+			throw new Error("Invalid archive request.");
+		}
+		return archiveBreak(id, note, day);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.restore, (_event, id: unknown, day: unknown) => {
+		if (typeof id !== "string" || !isDayKey(day)) {
+			throw new Error("Invalid restore request.");
+		}
+		return restoreBreak(id, day);
+	});
+
+	ipcMain.handle(BREAK_CHANNELS.remove, (_event, id: unknown) => {
+		if (typeof id !== "string") {
+			throw new Error("Invalid remove request.");
+		}
+		const removed = removeBreak(id);
+		unlinkHabitFromJournals(removed.id, removed.tag);
 	});
 
 	ipcMain.handle(JOURNAL_CHANNELS.get, (_event, query: unknown) => {

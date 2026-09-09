@@ -13,6 +13,19 @@ export function habitTagSlug(name: string): string {
 	return slug || "habit";
 }
 
+/** Pick a free #slug; if taken, try `slug-break`, then `slug-break-2`, … */
+export function uniqueJournalTag(base: string, taken: ReadonlySet<string>): string {
+	const normalized = (base.toLowerCase() || "habit").replace(/^-+|-+$/g, "") || "habit";
+	if (!taken.has(normalized)) return normalized;
+	let candidate = `${normalized}-break`;
+	let n = 2;
+	while (taken.has(candidate)) {
+		candidate = `${normalized}-break-${n}`;
+		n += 1;
+	}
+	return candidate;
+}
+
 export function extractHashtagSlugs(body: string): string[] {
 	const found = new Set<string>();
 	for (const match of body.matchAll(HASHTAG_RE)) {
@@ -30,9 +43,13 @@ export function stripHabitTagFromBody(body: string, tag: string): string {
 	return body.replace(re, "$1");
 }
 
-/** Resolve #slugs in the body to habit ids (body is the source of truth). */
+/** Resolve #slugs in the body to habit/break ids (body is the source of truth). */
 export function resolveHabitIdsFromBody(body: string, options: JournalHabitOption[]): string[] {
-	const byTag = new Map(options.map((option) => [option.tag, option.id]));
+	const byTag = new Map<string, string>();
+	for (const option of options) {
+		const tag = option.tag.toLowerCase();
+		if (!byTag.has(tag)) byTag.set(tag, option.id);
+	}
 	const byId = new Set(options.map((option) => option.id));
 	const next: string[] = [];
 	const seen = new Set<string>();

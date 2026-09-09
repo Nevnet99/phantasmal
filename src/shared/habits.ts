@@ -1,6 +1,7 @@
 /** Shared habit types and IPC channel names (renderer + preload + main). */
 
 import type { JournalSummary } from "./journal";
+import type { BreakView } from "./break";
 
 export const HABIT_CHANNELS = {
 	list: "habits:list",
@@ -133,6 +134,8 @@ export type HabitGraphCell = {
 	label: string;
 };
 
+export type HabitGraphRowKind = "habit" | "break" | "journal";
+
 export type HabitGraphRow = {
 	habitId: string;
 	name: string;
@@ -140,12 +143,24 @@ export type HabitGraphRow = {
 	streak: number;
 	streakLabel: string;
 	cells: HabitGraphCell[];
+	kind: HabitGraphRowKind;
+};
+
+/** Labeled block in the habit graph (habits vs breaks). */
+export type HabitGraphSection = {
+	id: string;
+	/** Shown above the block when non-empty (e.g. "Break"). */
+	title: string;
+	rows: HabitGraphRow[];
 };
 
 /** Habit × day completion matrix (days across the top, habits down the side). */
 export type HabitGraph = {
 	days: HabitGraphDay[];
+	/** Flat rows (journal, habits, breaks) for tests and simple access. */
 	rows: HabitGraphRow[];
+	/** Grouped rows with optional section titles for the Track UI. */
+	sections: HabitGraphSection[];
 };
 
 export type CalendarCell = {
@@ -207,6 +222,8 @@ export type TrackSnapshot = {
 	calendarCells: CalendarCell[];
 	/** Journal entries for the selected day (created order). */
 	journalEntries: JournalSummary[];
+	/** Active breaks for the selected day (clean-day check-offs). */
+	breaks: BreakView[];
 };
 
 export type HabitsApi = {

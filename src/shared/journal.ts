@@ -25,6 +25,8 @@ export type JournalHabitOption = {
 	archived: boolean;
 	/** Stable accent for chips and graph cells. */
 	color: string;
+	/** Habit (default) or break — both use #slug tags in the body. */
+	kind?: "habit" | "break";
 };
 
 export type JournalRecord = {
@@ -55,6 +57,7 @@ export type JournalHabitTag = {
 	name: string;
 	tag: string;
 	color: string;
+	kind?: "habit" | "break";
 };
 
 export type JournalEntryView = {

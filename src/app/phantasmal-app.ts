@@ -7,6 +7,7 @@ import type {
 	Weekday,
 } from "@/shared/habits";
 import { JOURNAL_GRAPH_ID, WEEKDAY_LABELS } from "@/shared/habits";
+import type { BreakHabitOption, BreakView } from "@/shared/break";
 import type { IdentityHabitOption, IdentityView } from "@/shared/identity";
 import {
 	JOURNAL_MOODS,
@@ -146,13 +147,14 @@ function emptyTrack(): TrackSnapshot {
 		habits: [],
 		remaining: [],
 		groups: [],
-		habitGraph: { days: [], rows: [] },
+		habitGraph: { days: [], rows: [], sections: [] },
 		weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
 		calendarMonthLabel: "",
 		calendarYear: year,
 		calendarMonth: month,
 		calendarCells: [],
 		journalEntries: [],
+		breaks: [],
 	};
 }
 
@@ -187,7 +189,7 @@ type PhantasmalApp = {
 	celebrateMessage: string;
 	celebrateTimer: number;
 	removeDialogOpen: boolean;
-	removeDialogKind: "habit" | "identity";
+	removeDialogKind: "habit" | "identity" | "break" | "journal";
 	removeDialogId: string;
 	removeDialogName: string;
 	removeArchiveNote: string;
@@ -217,6 +219,22 @@ type PhantasmalApp = {
 	identityNote: string;
 	identityHabitIds: string[];
 	identityBusy: boolean;
+	breaks: BreakView[];
+	archivedBreaks: BreakView[];
+	breakHabitOptions: BreakHabitOption[];
+	breakError: string;
+	breakEditingId: string | null;
+	breakName: string;
+	breakCue: string;
+	breakNote: string;
+	breakColor: string;
+	breakInvisible: string;
+	breakUnattractive: string;
+	breakDifficult: string;
+	breakUnsatisfying: string;
+	breakHabitIds: string[];
+	breakBusy: boolean;
+	breakTodayKey: string;
 	journalDay: string;
 	journalEntryId: string;
 	/** True while writing a new entry that is not saved yet. */
@@ -244,22 +262,32 @@ type PhantasmalApp = {
 	get isCreate(): boolean;
 	get isJournal(): boolean;
 	get isIdentity(): boolean;
+	get isBreak(): boolean;
 	get isSettings(): boolean;
 	get isSettingsUi(): boolean;
 	get isSettingsVault(): boolean;
 	get isSettingsHabits(): boolean;
 	get hasArchivedHabits(): boolean;
 	get hasArchivedIdentities(): boolean;
+	get hasArchivedBreaks(): boolean;
 	get identityEmpty(): boolean;
+	get breakEmpty(): boolean;
 	get removeDialogTitle(): string;
 	get removeDialogCopy(): string;
 	get removeDialogKeepLabel(): string;
 	get isRemoveHabit(): boolean;
 	get isRemoveIdentity(): boolean;
+	get isRemoveJournal(): boolean;
+	get canDeleteJournalEntry(): boolean;
 	get hasIdentityHabitOptions(): boolean;
 	get isIdentityEditing(): boolean;
 	get identityFormTitle(): string;
 	get identitySubmitLabel(): string;
+	get hasBreakHabitOptions(): boolean;
+	get isBreakEditing(): boolean;
+	get breakFormTitle(): string;
+	get breakSubmitLabel(): string;
+	get breakPreviewName(): string;
 	get journalDayLabel(): string;
 	get journalDayValue(): string;
 	get journalIsToday(): boolean;
@@ -287,6 +315,8 @@ type PhantasmalApp = {
 	get stackOptions(): { id: string; name: string }[];
 	get trackEmpty(): boolean;
 	get nothingDue(): boolean;
+	get hasTrackHabitsDue(): boolean;
+	get hasTrackBreaks(): boolean;
 	get hasTrackJournalEntries(): boolean;
 	get hasRemaining(): boolean;
 	get isEditing(): boolean;
@@ -351,7 +381,10 @@ type PhantasmalApp = {
 	hideDayPop(): void;
 	habitGraphCellClass(cell: HabitGraphCell): string;
 	habitGraphDayClass(day: { isToday: boolean; isSelected: boolean }): string;
-	isJournalGraphRow(row: { habitId: string }): boolean;
+	isJournalGraphRow(row: { habitId: string; kind?: string }): boolean;
+	isBreakGraphRow(row: { habitId: string; kind?: string }): boolean;
+	isGraphRowLink(row: { habitId: string; kind?: string }): boolean;
+	graphRowLinkTitle(row: { habitId: string; kind?: string }): string;
 	calendarCellClass(cell: CalendarCell): string;
 	habitRowClass(habit: HabitView): string;
 	habitRowWrapClass(habit: HabitView): string;
@@ -373,11 +406,16 @@ type PhantasmalApp = {
 	moveStack(id: string, direction: "up" | "down"): Promise<void>;
 	openRemoveDialog(habit: HabitView): void;
 	openIdentityRemoveDialog(identity: IdentityView): void;
+	openBreakRemoveDialog(item: BreakView): void;
+	openJournalRemoveDialog(): void;
 	closeRemoveDialog(): void;
 	confirmArchiveHabit(): Promise<void>;
 	confirmArchiveIdentity(): Promise<void>;
+	confirmArchiveBreak(): Promise<void>;
 	confirmDeleteHabit(): Promise<void>;
 	confirmDeleteIdentity(): Promise<void>;
+	confirmDeleteBreak(): Promise<void>;
+	confirmDeleteJournal(): Promise<void>;
 	celebrateTodayComplete(): void;
 	dismissCelebrate(): void;
 	refreshIdentities(): Promise<void>;
@@ -390,6 +428,22 @@ type PhantasmalApp = {
 	isIdentityHabitLinked(id: string): boolean;
 	identityHabitOptionClass(option: IdentityHabitOption): string;
 	saveIdentityForm(): Promise<void>;
+	refreshBreaks(): Promise<void>;
+	refreshArchivedBreaks(): Promise<void>;
+	restoreArchivedBreak(id: string): Promise<void>;
+	resetBreakForm(): void;
+	startBreakEdit(item: BreakView): void;
+	cancelBreakEdit(): void;
+	saveBreakForm(): Promise<void>;
+	toggleBreakClean(id: string): Promise<void>;
+	toggleBreakHabit(id: string): void;
+	isBreakHabitLinked(id: string): boolean;
+	breakHabitOptionClass(option: BreakHabitOption): string;
+	syncBreakColorFromPicker(): void;
+	onBreakColorChange(event: Event): void;
+	applyBreakColorToPicker(): void;
+	breakCardClass(item: BreakView): string;
+	breakCheckClass(item: BreakView): string;
 	refreshJournal(): Promise<void>;
 	selectJournalDay(day: string): void;
 	selectJournalEntry(id: string): void;
@@ -488,6 +542,22 @@ export function phantasmalApp(): PhantasmalApp {
 		identityNote: "",
 		identityHabitIds: [],
 		identityBusy: false,
+		breaks: [],
+		archivedBreaks: [],
+		breakHabitOptions: [],
+		breakError: "",
+		breakEditingId: null,
+		breakName: "",
+		breakCue: "",
+		breakNote: "",
+		breakColor: randomHabitColor(),
+		breakInvisible: "",
+		breakUnattractive: "",
+		breakDifficult: "",
+		breakUnsatisfying: "",
+		breakHabitIds: [],
+		breakBusy: false,
+		breakTodayKey: initial.todayKey,
 		journalDay: initial.todayKey,
 		journalEntryId: "",
 		journalComposing: false,
@@ -539,6 +609,10 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.route === "identity";
 		},
 
+		get isBreak() {
+			return this.route === "break";
+		},
+
 		get isSettings() {
 			return this.route === "settings";
 		},
@@ -563,23 +637,43 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.archivedIdentities.length > 0;
 		},
 
+		get hasArchivedBreaks() {
+			return this.archivedBreaks.length > 0;
+		},
+
 		get identityEmpty() {
 			return !this.identitiesBusy && this.identities.length === 0;
 		},
 
+		get breakEmpty() {
+			return !this.breakBusy && this.breaks.length === 0;
+		},
+
 		get removeDialogTitle() {
-			return this.removeDialogKind === "identity" ? "Remove identity?" : "Remove habit?";
+			if (this.removeDialogKind === "identity") return "Remove identity?";
+			if (this.removeDialogKind === "break") return "Remove break?";
+			if (this.removeDialogKind === "journal") return "Delete entry?";
+			return "Remove habit?";
 		},
 
 		get removeDialogCopy() {
 			if (this.removeDialogKind === "identity") {
 				return `${this.removeDialogName} can be archived so you can restore it later, or deleted forever.`;
 			}
+			if (this.removeDialogKind === "break") {
+				return `${this.removeDialogName} can be archived so you can restore it later, or deleted forever.`;
+			}
+			if (this.removeDialogKind === "journal") {
+				return `${this.removeDialogName} will be deleted forever. This cannot be undone.`;
+			}
 			return `${this.removeDialogName} can be archived so past check-offs stay on your graphs, or deleted forever.`;
 		},
 
 		get removeDialogKeepLabel() {
-			return this.removeDialogKind === "identity" ? "Keep identity" : "Keep habit";
+			if (this.removeDialogKind === "identity") return "Keep identity";
+			if (this.removeDialogKind === "break") return "Keep break";
+			if (this.removeDialogKind === "journal") return "Keep entry";
+			return "Keep habit";
 		},
 
 		get isRemoveHabit() {
@@ -588,6 +682,14 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get isRemoveIdentity() {
 			return this.removeDialogKind === "identity";
+		},
+
+		get isRemoveJournal() {
+			return this.removeDialogKind === "journal";
+		},
+
+		get canDeleteJournalEntry() {
+			return this.journalShowEditor && Boolean(this.journalEntryId) && !this.journalComposing;
 		},
 
 		get hasIdentityHabitOptions() {
@@ -606,6 +708,26 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.identityEditingId ? "Save changes" : "Add identity";
 		},
 
+		get hasBreakHabitOptions() {
+			return this.breakHabitOptions.length > 0;
+		},
+
+		get isBreakEditing() {
+			return Boolean(this.breakEditingId);
+		},
+
+		get breakFormTitle() {
+			return this.breakEditingId ? "Edit break" : "New break";
+		},
+
+		get breakSubmitLabel() {
+			return this.breakEditingId ? "Save changes" : "Add break";
+		},
+
+		get breakPreviewName() {
+			return this.breakName.trim() || "Bad habit name";
+		},
+
 		get journalDayLabel() {
 			return formatDayLabel(this.journalDay);
 		},
@@ -622,8 +744,8 @@ export function phantasmalApp(): PhantasmalApp {
 			if (this.journalSaving) return "Saving…";
 			if (this.journalDayEmpty) return "No entries";
 			if (this.journalComposing) return "New entry";
-			if (this.journalHabits.length === 1) return `1 habit tagged`;
-			if (this.journalHabits.length > 1) return `${this.journalHabits.length} habits tagged`;
+			if (this.journalHabits.length === 1) return `1 tagged`;
+			if (this.journalHabits.length > 1) return `${this.journalHabits.length} tagged`;
 			return "Markdown styles as you type";
 		},
 
@@ -725,6 +847,14 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get nothingDue() {
 			return !this.habitsBusy && this.track.hasHabits && this.track.totalCount === 0;
+		},
+
+		get hasTrackHabitsDue() {
+			return this.track.habits.length > 0;
+		},
+
+		get hasTrackBreaks() {
+			return this.track.breaks.length > 0;
 		},
 
 		get hasTrackJournalEntries() {
@@ -932,6 +1062,11 @@ export function phantasmalApp(): PhantasmalApp {
 				this.identityError = "";
 				void this.refreshIdentities();
 			}
+			if (id === "break") {
+				this.breakError = "";
+				void this.refreshBreaks();
+				this.applyBreakColorToPicker();
+			}
 			if (id === "journal") {
 				this.journalError = "";
 				this.todayKey = localDayKey();
@@ -955,6 +1090,7 @@ export function phantasmalApp(): PhantasmalApp {
 			if (tab === "habits") {
 				void this.refreshArchivedHabits();
 				void this.refreshArchivedIdentities();
+				void this.refreshArchivedBreaks();
 			}
 		},
 
@@ -1140,6 +1276,13 @@ export function phantasmalApp(): PhantasmalApp {
 		onHabitGraphRowLabelClick(habitId) {
 			if (habitId === JOURNAL_GRAPH_ID) {
 				this.openTrackJournalDay(this.selectedDay);
+				return;
+			}
+			const breakItem =
+				this.track.breaks.find((item) => item.id === habitId) ??
+				this.breaks.find((item) => item.id === habitId);
+			if (breakItem) {
+				this.startBreakEdit(breakItem);
 			}
 		},
 
@@ -1288,7 +1431,21 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		isJournalGraphRow(row) {
-			return row.habitId === JOURNAL_GRAPH_ID;
+			return row.kind === "journal" || row.habitId === JOURNAL_GRAPH_ID;
+		},
+
+		isBreakGraphRow(row) {
+			return row.kind === "break";
+		},
+
+		isGraphRowLink(row) {
+			return this.isJournalGraphRow(row) || this.isBreakGraphRow(row);
+		},
+
+		graphRowLinkTitle(row) {
+			if (this.isJournalGraphRow(row)) return "Open journal";
+			if (this.isBreakGraphRow(row)) return "Edit break";
+			return row.habitId;
 		},
 
 		calendarCellClass(cell) {
@@ -1598,6 +1755,42 @@ export function phantasmalApp(): PhantasmalApp {
 			});
 		},
 
+		openBreakRemoveDialog(item) {
+			this.removeDialogKind = "break";
+			this.removeDialogId = item.id;
+			this.removeDialogName = item.name;
+			this.removeArchiveNote = "";
+			this.removeBusy = false;
+			this.removeDialogOpen = true;
+			this.removeDialogFocus?.release();
+			this.removeDialogFocus = null;
+			requestAnimationFrame(() => {
+				const panel = document.getElementById("remove-dialog");
+				if (panel) {
+					this.removeDialogFocus = trapDialogFocus(panel);
+				}
+			});
+		},
+
+		openJournalRemoveDialog() {
+			if (!this.canDeleteJournalEntry) return;
+			this.removeDialogKind = "journal";
+			this.removeDialogId = this.journalEntryId;
+			const title = this.journalTitle.trim();
+			this.removeDialogName = title || "Untitled entry";
+			this.removeArchiveNote = "";
+			this.removeBusy = false;
+			this.removeDialogOpen = true;
+			this.removeDialogFocus?.release();
+			this.removeDialogFocus = null;
+			requestAnimationFrame(() => {
+				const panel = document.getElementById("remove-dialog");
+				if (panel) {
+					this.removeDialogFocus = trapDialogFocus(panel);
+				}
+			});
+		},
+
 		closeRemoveDialog() {
 			this.removeDialogFocus?.release();
 			this.removeDialogFocus = null;
@@ -1610,8 +1803,13 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		async confirmArchiveHabit() {
+			if (this.removeDialogKind === "journal") return;
 			if (this.removeDialogKind === "identity") {
 				await this.confirmArchiveIdentity();
+				return;
+			}
+			if (this.removeDialogKind === "break") {
+				await this.confirmArchiveBreak();
 				return;
 			}
 			const api = window.phantasmal?.habits;
@@ -1651,9 +1849,42 @@ export function phantasmalApp(): PhantasmalApp {
 			}
 		},
 
+		async confirmArchiveBreak() {
+			const api = window.phantasmal?.breaks;
+			if (!api || !this.removeDialogId) return;
+			this.removeBusy = true;
+			this.breakError = "";
+			try {
+				await api.archive(
+					this.removeDialogId,
+					this.removeArchiveNote,
+					this.route === "track" ? this.selectedDay : this.breakTodayKey,
+				);
+				if (this.breakEditingId === this.removeDialogId) {
+					this.resetBreakForm();
+				}
+				this.closeRemoveDialog();
+				await this.refreshBreaks();
+				void this.refreshTrack().catch(() => {
+					/* Track refresh is best-effort after break archive. */
+				});
+			} catch (error) {
+				this.breakError = error instanceof Error ? error.message : String(error);
+				this.removeBusy = false;
+			}
+		},
+
 		async confirmDeleteHabit() {
 			if (this.removeDialogKind === "identity") {
 				await this.confirmDeleteIdentity();
+				return;
+			}
+			if (this.removeDialogKind === "break") {
+				await this.confirmDeleteBreak();
+				return;
+			}
+			if (this.removeDialogKind === "journal") {
+				await this.confirmDeleteJournal();
 				return;
 			}
 			const api = window.phantasmal?.habits;
@@ -1689,6 +1920,58 @@ export function phantasmalApp(): PhantasmalApp {
 				await this.refreshTrack();
 			} catch (error) {
 				this.identityError = error instanceof Error ? error.message : String(error);
+				this.removeBusy = false;
+			}
+		},
+
+		async confirmDeleteBreak() {
+			const api = window.phantasmal?.breaks;
+			if (!api || !this.removeDialogId) return;
+			this.removeBusy = true;
+			this.breakError = "";
+			try {
+				await api.remove(this.removeDialogId);
+				if (this.breakEditingId === this.removeDialogId) {
+					this.resetBreakForm();
+				}
+				this.closeRemoveDialog();
+				await this.refreshBreaks();
+				void this.refreshTrack().catch(() => {
+					/* Track refresh is best-effort after break delete. */
+				});
+			} catch (error) {
+				this.breakError = error instanceof Error ? error.message : String(error);
+				this.removeBusy = false;
+			}
+		},
+
+		async confirmDeleteJournal() {
+			const api = window.phantasmal?.journal;
+			if (!api || !this.removeDialogId) return;
+			this.removeBusy = true;
+			this.journalError = "";
+			if (this.journalSaveTimer) {
+				window.clearTimeout(this.journalSaveTimer);
+				this.journalSaveTimer = 0;
+			}
+			try {
+				await api.remove(this.removeDialogId);
+				this.closeRemoveDialog();
+				this.journalEntryId = "";
+				this.journalComposing = false;
+				this.journalMood = null;
+				this.journalTitle = "";
+				this.journalBody = "";
+				this.journalHabits = [];
+				this.closeJournalTagMenu();
+				const editor = document.getElementById("journal-md") as DsMarkdownEditor | null;
+				if (editor) editor.value = "";
+				await this.refreshJournal();
+				void this.refreshTrack().catch(() => {
+					/* Track refresh is best-effort after journal delete. */
+				});
+			} catch (error) {
+				this.journalError = error instanceof Error ? error.message : String(error);
 				this.removeBusy = false;
 			}
 		},
@@ -1777,6 +2060,238 @@ export function phantasmalApp(): PhantasmalApp {
 			} catch (error) {
 				this.identityError = error instanceof Error ? error.message : String(error);
 				this.identityBusy = false;
+			}
+		},
+
+		async refreshBreaks() {
+			const api = window.phantasmal?.breaks;
+			if (!api) {
+				this.breaks = [];
+				this.archivedBreaks = [];
+				this.breakHabitOptions = [];
+				this.breakError = "Break API is only available in the Electron app.";
+				return;
+			}
+			this.breakBusy = true;
+			this.breakError = "";
+			try {
+				const snap = await api.list(localDayKey());
+				this.breaks = snap.breaks;
+				this.breakHabitOptions = snap.habitOptions;
+				this.breakTodayKey = snap.todayKey;
+			} catch (error) {
+				this.breakError = error instanceof Error ? error.message : String(error);
+			} finally {
+				this.breakBusy = false;
+			}
+		},
+
+		async refreshArchivedBreaks() {
+			const api = window.phantasmal?.breaks;
+			if (!api) {
+				this.archivedBreaks = [];
+				return;
+			}
+			try {
+				this.archivedBreaks = await api.listArchived();
+			} catch (error) {
+				this.breakError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async restoreArchivedBreak(id) {
+			const api = window.phantasmal?.breaks;
+			if (!api) return;
+			this.breakError = "";
+			try {
+				await api.restore(id, this.breakTodayKey || localDayKey());
+				await this.refreshBreaks();
+				await this.refreshArchivedBreaks();
+				void this.refreshTrack().catch(() => {
+					/* Track refresh is best-effort after break restore. */
+				});
+			} catch (error) {
+				this.breakError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		resetBreakForm() {
+			this.breakEditingId = null;
+			this.breakName = "";
+			this.breakCue = "";
+			this.breakNote = "";
+			this.breakColor = randomHabitColor();
+			this.breakInvisible = "";
+			this.breakUnattractive = "";
+			this.breakDifficult = "";
+			this.breakUnsatisfying = "";
+			this.breakHabitIds = [];
+			this.breakBusy = false;
+			this.applyBreakColorToPicker();
+		},
+
+		startBreakEdit(item) {
+			this.breakEditingId = item.id;
+			this.breakName = item.name;
+			this.breakCue = item.cue;
+			this.breakNote = item.note;
+			this.breakColor = item.color;
+			this.breakInvisible = item.invisible;
+			this.breakUnattractive = item.unattractive;
+			this.breakDifficult = item.difficult;
+			this.breakUnsatisfying = item.unsatisfying;
+			this.breakHabitIds = [...item.replacementHabitIds];
+			this.breakError = "";
+			this.route = "break";
+			if (this.breakHabitOptions.length === 0) {
+				void this.refreshBreaks();
+			}
+			this.applyBreakColorToPicker();
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					const form = document.querySelector(".break__form");
+					form?.scrollIntoView({ block: "start", behavior: "smooth" });
+					const name = document.querySelector<HTMLInputElement>('input[name="break-name"]');
+					name?.focus();
+				});
+			});
+		},
+
+		cancelBreakEdit() {
+			this.resetBreakForm();
+			this.breakError = "";
+		},
+
+		toggleBreakHabit(id) {
+			if (this.breakHabitIds.includes(id)) {
+				this.breakHabitIds = this.breakHabitIds.filter((item) => item !== id);
+			} else {
+				this.breakHabitIds = [...this.breakHabitIds, id];
+			}
+		},
+
+		isBreakHabitLinked(id) {
+			return this.breakHabitIds.includes(id);
+		},
+
+		breakHabitOptionClass(option) {
+			const parts = ["identity-habit", "break-habit"];
+			if (this.isBreakHabitLinked(option.id)) parts.push("identity-habit--on");
+			if (option.archived) parts.push("identity-habit--archived");
+			return parts.join(" ");
+		},
+
+		applyBreakColorToPicker() {
+			requestAnimationFrame(() => {
+				const picker = document.getElementById("break-color-picker");
+				if (!picker || !("value" in picker)) return;
+				(picker as HTMLElement & { value: string }).value = this.breakColor;
+			});
+		},
+
+		syncBreakColorFromPicker() {
+			const picker = document.getElementById("break-color-picker");
+			if (!picker || !("value" in picker)) return;
+			const next = (picker as HTMLElement & { value: string }).value;
+			if (!isHabitColor(next)) return;
+			this.breakColor = next.toLowerCase();
+		},
+
+		onBreakColorChange(event) {
+			const detail = (event as CustomEvent<{ value: string }>).detail;
+			const target = event.target as HTMLElement & { value?: string };
+			const next = detail?.value || target?.value;
+			if (!next || !isHabitColor(next)) return;
+			this.breakColor = next.toLowerCase();
+		},
+
+		breakCardClass(item) {
+			const parts = ["break-card"];
+			if (item.cleanToday) parts.push("break-card--clean");
+			return parts.join(" ");
+		},
+
+		breakCheckClass(item) {
+			const parts = ["habit-check"];
+			if (item.cleanToday) parts.push("habit-check--done");
+			return parts.join(" ");
+		},
+
+		async saveBreakForm() {
+			const api = window.phantasmal?.breaks;
+			if (!api) {
+				this.breakError = "Break API is only available in the Electron app.";
+				return;
+			}
+			this.syncBreakColorFromPicker();
+			const name = this.breakName.trim();
+			if (!name) {
+				this.breakError = "Name the bad habit before saving.";
+				return;
+			}
+			this.breakBusy = true;
+			this.breakError = "";
+			const draft = {
+				name,
+				cue: this.breakCue.trim(),
+				note: this.breakNote.trim(),
+				color: this.breakColor,
+				invisible: this.breakInvisible.trim(),
+				unattractive: this.breakUnattractive.trim(),
+				difficult: this.breakDifficult.trim(),
+				unsatisfying: this.breakUnsatisfying.trim(),
+				replacementHabitIds: [...this.breakHabitIds],
+			};
+			try {
+				const day = this.breakTodayKey || localDayKey();
+				if (this.breakEditingId) {
+					await api.update(this.breakEditingId, draft, day);
+				} else {
+					await api.create(draft, day);
+				}
+				this.resetBreakForm();
+				await this.refreshBreaks();
+				void this.refreshTrack().catch(() => {
+					/* Track refresh is best-effort after break save. */
+				});
+			} catch (error) {
+				this.breakError = error instanceof Error ? error.message : String(error);
+				this.breakBusy = false;
+			}
+		},
+
+		async toggleBreakClean(id) {
+			const api = window.phantasmal?.breaks;
+			if (!api) return;
+			this.breakError = "";
+			const day = this.route === "track" ? this.selectedDay : this.breakTodayKey || localDayKey();
+			const item =
+				this.route === "track"
+					? this.track.breaks.find((breakItem) => breakItem.id === id)
+					: this.breaks.find((breakItem) => breakItem.id === id);
+			const markingClean = Boolean(item && !item.cleanToday);
+			const clearingToday =
+				day === localDayKey() &&
+				markingClean &&
+				this.track.remainingCount === 1 &&
+				this.track.totalCount > 0;
+			try {
+				await api.toggleCleanDay(id, day);
+				if (this.route === "break") {
+					await this.refreshBreaks();
+				}
+				await this.refreshTrack();
+				if (clearingToday && this.track.remainingCount === 0 && this.track.totalCount > 0) {
+					this.celebrateTodayComplete();
+				}
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				this.breakError = message;
+				this.habitsError = message;
+				if (this.route === "break") {
+					await this.refreshBreaks();
+				}
+				await this.refreshTrack();
 			}
 		},
 

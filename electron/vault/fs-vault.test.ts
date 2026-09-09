@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { closeVault, getOpenVault, looksLikeVault, openVaultAt, writeJsonAtomic } from "./fs-vault";
 import {
 	CURRENT_VAULT_VERSION,
+	BREAKS_DIRNAME,
 	HABITS_DIRNAME,
 	IDENTITY_DIRNAME,
 	JOURNAL_DIRNAME,
@@ -36,6 +37,7 @@ describe("fs vault", () => {
 		expect(fs.existsSync(path.join(vaultDir, HABITS_DIRNAME))).toBe(true);
 		expect(fs.existsSync(path.join(vaultDir, JOURNAL_DIRNAME))).toBe(true);
 		expect(fs.existsSync(path.join(vaultDir, IDENTITY_DIRNAME))).toBe(true);
+		expect(fs.existsSync(path.join(vaultDir, BREAKS_DIRNAME))).toBe(true);
 		expect(getOpenVault()?.path).toBe(vaultDir);
 		expect(looksLikeVault(vaultDir)).toBe(true);
 	});

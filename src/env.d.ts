@@ -1,5 +1,6 @@
 export {};
 
+import type { BreakApi } from "./shared/break";
 import type { HabitsApi } from "./shared/habits";
 import type { IdentityApi } from "./shared/identity";
 import type { JournalApi } from "./shared/journal";
@@ -14,6 +15,7 @@ declare global {
 			settings: SettingsApi;
 			habits: HabitsApi;
 			identity: IdentityApi;
+			breaks: BreakApi;
 			journal: JournalApi;
 			reminders: RemindersApi;
 		};

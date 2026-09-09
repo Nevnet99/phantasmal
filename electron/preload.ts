@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
 import {
+	BREAK_CHANNELS,
+	type BreakApi,
+	type BreakDraft,
+	type BreakSnapshot,
+	type BreakView,
+} from "../src/shared/break";
+import {
 	HABIT_CHANNELS,
 	type DayKey,
 	type HabitDraft,
@@ -93,6 +100,22 @@ const identity: IdentityApi = {
 	remove: (id: string) => ipcRenderer.invoke(IDENTITY_CHANNELS.remove, id) as Promise<void>,
 };
 
+const breaks: BreakApi = {
+	list: (day?: string) => ipcRenderer.invoke(BREAK_CHANNELS.list, day) as Promise<BreakSnapshot>,
+	listArchived: () => ipcRenderer.invoke(BREAK_CHANNELS.listArchived) as Promise<BreakView[]>,
+	create: (draft: BreakDraft, day: string) =>
+		ipcRenderer.invoke(BREAK_CHANNELS.create, draft, day) as Promise<BreakView>,
+	update: (id: string, draft: BreakDraft, day: string) =>
+		ipcRenderer.invoke(BREAK_CHANNELS.update, id, draft, day) as Promise<BreakView>,
+	toggleCleanDay: (id: string, day: string) =>
+		ipcRenderer.invoke(BREAK_CHANNELS.toggleCleanDay, id, day) as Promise<BreakView>,
+	archive: (id: string, note: string, day: string) =>
+		ipcRenderer.invoke(BREAK_CHANNELS.archive, id, note, day) as Promise<BreakView>,
+	restore: (id: string, day: string) =>
+		ipcRenderer.invoke(BREAK_CHANNELS.restore, id, day) as Promise<BreakView>,
+	remove: (id: string) => ipcRenderer.invoke(BREAK_CHANNELS.remove, id) as Promise<void>,
+};
+
 const journal: JournalApi = {
 	get: (query) => ipcRenderer.invoke(JOURNAL_CHANNELS.get, query) as Promise<JournalSnapshot>,
 	list: () => ipcRenderer.invoke(JOURNAL_CHANNELS.list) as Promise<JournalSummary[]>,
@@ -112,6 +135,7 @@ contextBridge.exposeInMainWorld("phantasmal", {
 	settings,
 	habits,
 	identity,
+	breaks,
 	journal,
 	reminders,
 });

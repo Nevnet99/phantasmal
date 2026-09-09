@@ -2,6 +2,7 @@ export const VAULT_META_FILENAME = "phantasmal.json";
 export const HABITS_DIRNAME = "habits";
 export const JOURNAL_DIRNAME = "journal";
 export const IDENTITY_DIRNAME = "identity";
+export const BREAKS_DIRNAME = "breaks";
 
 export const CURRENT_VAULT_VERSION = 1;
 

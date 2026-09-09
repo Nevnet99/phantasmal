@@ -406,6 +406,36 @@
 									</li>
 								</template>
 							</ul>
+
+							<h2 class="settings-panel__title">Archived breaks</h2>
+							<p class="settings-panel__copy">
+								Archived breaks leave the Break list but keep clean-day history. Restore to bring
+								one back.
+							</p>
+							<p class="panel__hint" x-show="!hasArchivedBreaks">No archived breaks.</p>
+							<ul class="archive-list" x-show="hasArchivedBreaks">
+								<template x-for="item in archivedBreaks" :key="item.id">
+									<li class="archive-list__item">
+										<div class="archive-list__body">
+											<p class="archive-list__name" x-text="item.name"></p>
+											<p class="archive-list__meta">
+												Archived
+												<span x-text="item.archivedLabel"></span>
+												·
+												<span x-text="item.streakLabel"></span>
+											</p>
+											<p
+												class="archive-list__note"
+												x-show="item.archiveNote"
+												x-text="item.archiveNote"
+											></p>
+										</div>
+										<button type="button" class="ds-btn" @click="restoreArchivedBreak(item.id)">
+											Restore
+										</button>
+									</li>
+								</template>
+							</ul>
 						</div>
 
 						<div
@@ -533,43 +563,55 @@
 											</template>
 										</div>
 										<div class="habit-graph__streak-head" title="Streak">Streak</div>
-										<template x-for="row in track.habitGraph.rows" :key="row.habitId + row.color">
-											<div
-												class="habit-graph__row"
-												role="row"
-												:style="'--habit-color: ' + row.color"
-											>
-												<button
-													type="button"
-													class="habit-graph__label habit-graph__label--link"
-													x-show="isJournalGraphRow(row)"
-													title="Open journal"
-													@click="onHabitGraphRowLabelClick(row.habitId)"
-													x-text="row.name"
-												></button>
+										<template x-for="section in track.habitGraph.sections" :key="section.id">
+											<div class="habit-graph__block">
 												<div
-													class="habit-graph__label"
-													x-show="!isJournalGraphRow(row)"
-													x-text="row.name"
-													:title="row.name"
-												></div>
-												<div class="habit-graph__cells">
-													<template x-for="cell in row.cells" :key="cell.key">
+													class="habit-graph__section"
+													x-show="section.title"
+													role="separator"
+													:aria-label="section.title"
+												>
+													<span class="habit-graph__section-title" x-text="section.title"></span>
+												</div>
+												<template x-for="row in section.rows" :key="row.habitId + row.color">
+													<div
+														class="habit-graph__row"
+														role="row"
+														:style="'--habit-color: ' + row.color"
+													>
 														<button
 															type="button"
-															:class="habitGraphCellClass(cell)"
-															:title="cell.label"
-															:aria-label="cell.label"
-															@click="onHabitGraphCellClick(cell)"
+															class="habit-graph__label habit-graph__label--link"
+															x-show="isGraphRowLink(row)"
+															:title="graphRowLinkTitle(row)"
+															@click="onHabitGraphRowLabelClick(row.habitId)"
+															x-text="row.name"
 														></button>
-													</template>
-												</div>
-												<div
-													class="habit-graph__streak"
-													:title="row.streakLabel"
-													:aria-label="row.streakLabel"
-													x-text="row.streak"
-												></div>
+														<div
+															class="habit-graph__label"
+															x-show="!isGraphRowLink(row)"
+															x-text="row.name"
+															:title="row.name"
+														></div>
+														<div class="habit-graph__cells">
+															<template x-for="cell in row.cells" :key="cell.key">
+																<button
+																	type="button"
+																	:class="habitGraphCellClass(cell)"
+																	:title="cell.label"
+																	:aria-label="cell.label"
+																	@click="onHabitGraphCellClick(cell)"
+																></button>
+															</template>
+														</div>
+														<div
+															class="habit-graph__streak"
+															:title="row.streakLabel"
+															:aria-label="row.streakLabel"
+															x-text="row.streak"
+														></div>
+													</div>
+												</template>
 											</div>
 										</template>
 									</div>
@@ -674,7 +716,7 @@
 
 							<p class="panel__hint" x-show="nothingDue">Nothing scheduled for this day.</p>
 
-							<div class="habit-groups" x-show="!nothingDue">
+							<div class="habit-groups" x-show="hasTrackHabitsDue">
 								<template x-for="group in track.groups" :key="group.key">
 									<section class="habit-group">
 										<header class="habit-group__header" x-show="group.title">
@@ -780,6 +822,83 @@
 									</section>
 								</template>
 							</div>
+
+							<section
+								class="track-breaks"
+								x-show="hasTrackBreaks"
+								aria-labelledby="track-breaks-title"
+							>
+								<header class="track-breaks__head">
+									<h3 id="track-breaks-title" class="track-breaks__title">Break</h3>
+									<p class="track-breaks__hint">Mark clean when you resist the urge today.</p>
+								</header>
+								<ul class="habit-list track-breaks__list">
+									<template x-for="item in track.breaks" :key="item.id">
+										<li
+											class="habit-list__row habit-list__row--break"
+											:style="'--habit-color: ' + item.color"
+										>
+											<button
+												type="button"
+												class="habit-list__item"
+												:class="item.cleanToday && 'habit-list__item--done'"
+												:aria-pressed="item.cleanToday"
+												title="Mark clean day"
+												aria-label="Mark clean day"
+												@click="toggleBreakClean(item.id)"
+											>
+												<span
+													class="habit-check"
+													:class="item.cleanToday && 'habit-check--done'"
+													aria-hidden="true"
+												>
+													<svg
+														class="habit-check__icon"
+														viewBox="0 0 16 16"
+														width="16"
+														height="16"
+														focusable="false"
+													>
+														<path
+															class="habit-check__tick"
+															d="M3.5 8.2 6.6 11.3 12.5 4.7"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+															stroke-linecap="square"
+															stroke-linejoin="miter"
+														/>
+													</svg>
+												</span>
+												<span class="habit-list__main">
+													<span class="habit-list__name" x-text="item.name"></span>
+													<span class="habit-list__meta" x-show="item.cue" x-text="item.cue"></span>
+													<span class="habit-list__meta" x-text="item.lawsLabel"></span>
+												</span>
+												<span class="habit-list__streak" x-text="item.streakLabel"></span>
+											</button>
+											<button
+												type="button"
+												class="habit-list__edit"
+												title="Edit break"
+												aria-label="Edit break"
+												@click="startBreakEdit(item)"
+											>
+												<ds-icon name="edit" size="sm"></ds-icon>
+											</button>
+											<button
+												type="button"
+												class="habit-list__remove"
+												title="Remove break"
+												aria-label="Remove break"
+												@click="openBreakRemoveDialog(item)"
+											>
+												<ds-icon name="delete" size="sm"></ds-icon>
+											</button>
+										</li>
+									</template>
+								</ul>
+							</section>
 						</div>
 					</section>
 
@@ -1238,7 +1357,7 @@
 									<ds-markdown-editor
 										id="journal-md"
 										class="journal-editor__md"
-										placeholder="Write in markdown. Type # to tag a habit…"
+										placeholder="Write in markdown. Type # to tag a habit or break…"
 										:value="journalBody"
 										:habits="journalHabitOptions"
 										@ds-change="onJournalEditorChange($event)"
@@ -1260,11 +1379,25 @@
 														x-text="journalHashTag(option.tag)"
 													></span>
 													<span class="journal-tag-menu__name" x-text="option.name"></span>
+													<span class="journal-tag-menu__kind" x-show="option.kind === 'break'"
+														>Break</span
+													>
 												</button>
 											</li>
 										</template>
 									</ul>
 								</div>
+							</div>
+
+							<div class="panel__actions" x-show="canDeleteJournalEntry">
+								<button
+									type="button"
+									class="ds-btn ds-btn--danger"
+									:disabled="journalSaving || journalBusy || removeBusy"
+									@click="openJournalRemoveDialog()"
+								>
+									Delete entry
+								</button>
 							</div>
 						</div>
 
@@ -1294,6 +1427,248 @@
 								</template>
 							</ul>
 						</section>
+					</section>
+
+					<section class="panel panel--wide break" x-show="isBreak" aria-labelledby="break-title">
+						<header class="break__header">
+							<div class="break__heading">
+								<h1 id="break-title" class="panel__title">Break</h1>
+								<p class="panel__lede">
+									Invert the four laws: make the bad habit invisible, unattractive, difficult, and
+									unsatisfying—then mark clean days when you resist.
+								</p>
+							</div>
+						</header>
+
+						<p class="setup__error" x-show="breakError" x-text="breakError" role="alert"></p>
+
+						<form class="habit-form break__form" @submit.prevent="saveBreakForm()">
+							<h2 class="break__form-title" x-text="breakFormTitle"></h2>
+							<label class="field">
+								<span class="field__label">Bad habit</span>
+								<input
+									class="field__input"
+									type="text"
+									name="break-name"
+									autocomplete="off"
+									placeholder="Late-night scrolling"
+									x-model="breakName"
+									required
+								/>
+							</label>
+							<label class="field">
+								<span class="field__label">Cue <span class="field__optional">optional</span></span>
+								<input
+									class="field__input"
+									type="text"
+									name="break-cue"
+									autocomplete="off"
+									placeholder="Phone on the nightstand after 10pm"
+									x-model="breakCue"
+								/>
+							</label>
+							<label class="field">
+								<span class="field__label">Note <span class="field__optional">optional</span></span>
+								<textarea
+									class="field__input field__input--area"
+									name="break-note"
+									rows="2"
+									placeholder="Why this habit costs you"
+									x-model="breakNote"
+								></textarea>
+							</label>
+
+							<div class="field">
+								<span class="field__label">Color</span>
+								<p class="field__help">Accent for this break on the card list.</p>
+								<ds-color-picker
+									id="break-color-picker"
+									aria-label="Break color"
+									@ds-change="onBreakColorChange($event)"
+								></ds-color-picker>
+								<div class="habit-tag-preview" :style="'--habit-color: ' + breakColor">
+									<span class="habit-tag-preview__label">Tag preview</span>
+									<span class="journal-linked__item habit-tag-preview__chip">
+										<span class="journal-linked__swatch" aria-hidden="true"></span>
+										<span x-text="breakPreviewName"></span>
+									</span>
+								</div>
+							</div>
+
+							<fieldset class="field break-laws-fields">
+								<legend class="field__label">Inversion plan</legend>
+								<p class="field__help">Write how you’ll invert each law for this habit.</p>
+								<label class="field">
+									<span class="field__label">Make it invisible</span>
+									<input
+										class="field__input"
+										type="text"
+										name="break-invisible"
+										autocomplete="off"
+										placeholder="Hide or avoid the cue"
+										x-model="breakInvisible"
+									/>
+									<span class="field__help">Hide or avoid the cue.</span>
+								</label>
+								<label class="field">
+									<span class="field__label">Make it unattractive</span>
+									<input
+										class="field__input"
+										type="text"
+										name="break-unattractive"
+										autocomplete="off"
+										placeholder="Reframe the craving"
+										x-model="breakUnattractive"
+									/>
+									<span class="field__help">Reframe the craving.</span>
+								</label>
+								<label class="field">
+									<span class="field__label">Make it difficult</span>
+									<input
+										class="field__input"
+										type="text"
+										name="break-difficult"
+										autocomplete="off"
+										placeholder="Add friction to the response"
+										x-model="breakDifficult"
+									/>
+									<span class="field__help">Add friction to the response.</span>
+								</label>
+								<label class="field">
+									<span class="field__label">Make it unsatisfying</span>
+									<input
+										class="field__input"
+										type="text"
+										name="break-unsatisfying"
+										autocomplete="off"
+										placeholder="Add a cost or accountability"
+										x-model="breakUnsatisfying"
+									/>
+									<span class="field__help">Add a cost or accountability.</span>
+								</label>
+							</fieldset>
+
+							<fieldset class="field" x-show="hasBreakHabitOptions">
+								<legend class="field__label">
+									Replacement habits <span class="field__optional">optional</span>
+								</legend>
+								<p class="field__help">
+									Link good habits that take the place of this one when the urge hits.
+								</p>
+								<div class="identity-habits">
+									<template x-for="option in breakHabitOptions" :key="option.id">
+										<button
+											type="button"
+											:class="breakHabitOptionClass(option)"
+											:aria-pressed="isBreakHabitLinked(option.id)"
+											@click="toggleBreakHabit(option.id)"
+										>
+											<span class="identity-habit__name" x-text="option.name"></span>
+											<span class="identity-habit__tag" x-show="option.archived">Archived</span>
+										</button>
+									</template>
+								</div>
+							</fieldset>
+							<p class="panel__hint" x-show="!hasBreakHabitOptions">
+								Create a habit in Track first, then link it here as a replacement.
+							</p>
+
+							<div class="panel__actions">
+								<button type="submit" class="ds-btn ds-btn--primary" :disabled="breakBusy">
+									<span x-text="breakSubmitLabel"></span>
+								</button>
+								<button
+									type="button"
+									class="ds-btn"
+									x-show="isBreakEditing"
+									:disabled="breakBusy"
+									@click="cancelBreakEdit()"
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+
+						<p class="panel__hint" x-show="breakEmpty">
+							No breaks yet. Name a bad habit above and invert the laws.
+						</p>
+
+						<ul class="break-list" x-show="!breakEmpty">
+							<template x-for="item in breaks" :key="item.id">
+								<li :class="breakCardClass(item)" :style="'--habit-color: ' + item.color">
+									<button
+										type="button"
+										class="break-card__check"
+										:aria-pressed="item.cleanToday"
+										title="Mark clean today"
+										aria-label="Mark clean today"
+										@click="toggleBreakClean(item.id)"
+									>
+										<span :class="breakCheckClass(item)" aria-hidden="true">
+											<svg
+												class="habit-check__icon"
+												viewBox="0 0 16 16"
+												width="16"
+												height="16"
+												focusable="false"
+											>
+												<path
+													class="habit-check__tick"
+													d="M3.5 8.2 6.6 11.3 12.5 4.7"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="square"
+													stroke-linejoin="miter"
+												/>
+											</svg>
+										</span>
+									</button>
+									<div class="break-card__body">
+										<p class="break-card__name" x-text="item.name"></p>
+										<p class="break-card__streak" x-text="item.streakLabel"></p>
+										<p class="break-card__laws-summary" x-text="item.lawsLabel"></p>
+										<p class="break-card__linked" x-text="item.linkedLabel"></p>
+										<p class="break-card__meta" x-show="item.cue" x-text="item.cue"></p>
+										<p class="break-card__note" x-show="item.note" x-text="item.note"></p>
+										<ul class="break-laws" aria-label="Inversion laws">
+											<template x-for="law in item.laws" :key="law.id">
+												<li
+													class="break-laws__item"
+													:class="law.filled && 'break-laws__item--filled'"
+												>
+													<span class="break-laws__title" x-text="law.title"></span>
+													<span
+														class="break-laws__body"
+														x-text="law.filled ? law.body : law.prompt"
+													></span>
+												</li>
+											</template>
+										</ul>
+									</div>
+									<div class="break-card__actions">
+										<button
+											type="button"
+											class="habit-list__edit"
+											title="Edit"
+											aria-label="Edit break"
+											@click="startBreakEdit(item)"
+										>
+											<ds-icon name="edit" size="sm"></ds-icon>
+										</button>
+										<button
+											type="button"
+											class="habit-list__remove"
+											title="Remove"
+											aria-label="Remove break"
+											@click="openBreakRemoveDialog(item)"
+										>
+											<ds-icon name="delete" size="sm"></ds-icon>
+										</button>
+									</div>
+								</li>
+							</template>
+						</ul>
 					</section>
 
 					<section class="panel" x-show="isStub" aria-labelledby="stub-title">
@@ -1330,8 +1705,10 @@
 				<div class="dialog__panel">
 					<h2 id="remove-dialog-title" class="dialog__title" x-text="removeDialogTitle"></h2>
 					<p class="dialog__copy" x-text="removeDialogCopy"></p>
-					<p class="dialog__warn">Delete permanently is destructive and cannot be undone.</p>
-					<label class="field">
+					<p class="dialog__warn" x-show="!isRemoveJournal">
+						Delete permanently is destructive and cannot be undone.
+					</p>
+					<label class="field" x-show="!isRemoveJournal">
 						<span class="field__label"
 							>Archive note <span class="field__optional">optional</span></span
 						>
@@ -1354,6 +1731,7 @@
 						<button
 							type="button"
 							class="ds-btn ds-btn--primary"
+							x-show="!isRemoveJournal"
 							:disabled="removeBusy"
 							@click="confirmArchiveHabit()"
 						>

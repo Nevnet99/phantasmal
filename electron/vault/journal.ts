@@ -22,10 +22,12 @@ import {
 	habitTagSlug,
 	resolveHabitIdsFromBody,
 	stripHabitTagFromBody,
+	uniqueJournalTag,
 } from "../../src/lib/journal-markdown";
 import { JOURNAL_DIRNAME } from "./schema";
 import { getOpenVault, writeJsonAtomic } from "./fs-vault";
 import { loadHabits } from "./habits";
+import { loadBreaks } from "./breaks";
 
 const ENTRY_ID_RE = /^\d{4}-\d{2}-\d{2}(?:-[a-f0-9]{6})?$/;
 
@@ -104,18 +106,37 @@ function readJournalFile(filePath: string): JournalRecord | null {
 }
 
 function habitOptions(): JournalHabitOption[] {
-	return loadHabits()
-		.map((habit) => ({
-			id: habit.id,
-			name: habit.name,
-			tag: habitTagSlug(habit.name),
-			archived: Boolean(habit.archivedAt),
-			color: resolveHabitColor(habit.color, habit.id),
-		}))
-		.sort((a, b) => {
-			if (a.archived !== b.archived) return a.archived ? 1 : -1;
-			return a.name.localeCompare(b.name);
+	const habits: JournalHabitOption[] = loadHabits().map((habit) => ({
+		id: habit.id,
+		name: habit.name,
+		tag: habitTagSlug(habit.name),
+		archived: Boolean(habit.archivedAt),
+		color: resolveHabitColor(habit.color, habit.id),
+		kind: "habit",
+	}));
+
+	const seenTags = new Set(habits.map((option) => option.tag.toLowerCase()));
+	const breaks: JournalHabitOption[] = [];
+	for (const record of loadBreaks()) {
+		const tag = uniqueJournalTag(habitTagSlug(record.name), seenTags);
+		seenTags.add(tag);
+		breaks.push({
+			id: record.id,
+			name: record.name,
+			tag,
+			archived: Boolean(record.archivedAt),
+			color: resolveHabitColor(record.color, record.id),
+			kind: "break",
 		});
+	}
+
+	return [...habits, ...breaks].sort((a, b) => {
+		if (a.archived !== b.archived) return a.archived ? 1 : -1;
+		if ((a.kind ?? "habit") !== (b.kind ?? "habit")) {
+			return (a.kind ?? "habit") === "habit" ? -1 : 1;
+		}
+		return a.name.localeCompare(b.name);
+	});
 }
 
 function emptyEntry(day: DayKey, id = ""): JournalRecord {
@@ -145,7 +166,13 @@ function toEntryView(record: JournalRecord, options: JournalHabitOption[]): Jour
 	const habitIds = resolveHabitIdsFromBody(record.body, options);
 	const habits = habitIds.map((id) => {
 		const option = byId.get(id)!;
-		return { id: option.id, name: option.name, tag: option.tag, color: option.color };
+		return {
+			id: option.id,
+			name: option.name,
+			tag: option.tag,
+			color: option.color,
+			kind: option.kind ?? "habit",
+		};
 	});
 	const isEmpty = isBlankRecord({ ...record, habitIds });
 	return {
@@ -160,7 +187,7 @@ function toEntryView(record: JournalRecord, options: JournalHabitOption[]): Jour
 		habits,
 		habitsLabel:
 			habits.length === 0
-				? "No habits tagged"
+				? "Nothing tagged"
 				: habits.length === 1
 					? `Tagged: ${habits[0].name}`
 					: `Tagged: ${habits[0].name}, +${habits.length - 1}`,
