@@ -70,7 +70,9 @@ function resolveAppImageIcon(): string | undefined {
 		appDir ? path.join(appDir, "usr/share/icons/hicolor/512x512/apps/Phantasmal.png") : null,
 		appDir ? path.join(appDir, "Phantasmal.png") : null,
 	];
-	return candidates.find((candidate): candidate is string => Boolean(candidate && fs.existsSync(candidate)));
+	return candidates.find((candidate): candidate is string =>
+		Boolean(candidate && fs.existsSync(candidate)),
+	);
 }
 
 /** Quote a path for a Desktop Entry Exec= key (spaces / special chars). */
