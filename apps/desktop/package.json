@@ -85,9 +85,7 @@
 			],
 			"category": "Office",
 			"synopsis": "Local-first habit workspace",
-			"executableName": "Phantasmal",
-			"desktopName": "Phantasmal",
-			"syncDesktopName": true
+			"executableName": "Phantasmal"
 		},
 		"mac": {
 			"target": [
