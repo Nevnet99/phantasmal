@@ -180,8 +180,9 @@ async function main() {
 			id: pick.platform,
 			label: meta.label,
 			hint: meta.hint,
-			file: pick.file,
-			url: `/downloads/${pick.file}`,
+			// Use the real release asset name in the UI; download CTAs prefer githubUrl.
+			file: chosen.name,
+			url: null,
 			githubUrl,
 			size: chosen.size,
 		};
