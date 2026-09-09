@@ -16,6 +16,14 @@ export function installAppImageDesktopEntry(): { desktopPath: string } | null {
 	const appImagePath = process.env.APPIMAGE;
 	if (!appImagePath || !fs.existsSync(appImagePath)) return null;
 
+	// Browser downloads often land without +x; the pin then fails with a
+	// "missing executable permissions" dialog even when the file exists.
+	try {
+		fs.chmodSync(appImagePath, 0o755);
+	} catch (err) {
+		console.error("Failed to chmod AppImage:", err);
+	}
+
 	const home = os.homedir();
 	const applicationsDir = path.join(home, ".local", "share", "applications");
 	const iconsDir = path.join(home, ".local", "share", "icons", "hicolor", "512x512", "apps");
