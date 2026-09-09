@@ -4,6 +4,7 @@
 	"private": true,
 	"description": "Phantasmal monorepo — desktop app and marketing site",
 	"author": "Nevnet99",
+	"license": "MIT",
 	"type": "module",
 	"repository": {
 		"type": "git",

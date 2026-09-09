@@ -2,6 +2,8 @@
 
 Local-first habit workspace (Electron) plus an Astro marketing site — Nx monorepo.
 
+**License:** [MIT](./LICENSE)
+
 **UI (desktop):** Lit for the design system only; Alpine.js for app screens (minimal JS).
 
 ## Layout
