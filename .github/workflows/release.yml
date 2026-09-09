@@ -112,11 +112,11 @@ jobs:
         run: |
           set -euo pipefail
           bun run build
-          EXTRA=()
           if [[ "${{ needs.version.outputs.draft }}" == "true" ]]; then
-            EXTRA+=(-c.publish.releaseType=draft)
+            bunx electron-builder --publish always -c.publish.releaseType=draft
+          else
+            bunx electron-builder --publish always
           fi
-          bunx electron-builder --publish always "${EXTRA[@]}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
