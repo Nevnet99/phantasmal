@@ -95,6 +95,9 @@ const sourceUrl = "https://github.com/Nevnet99/phantasmal";
 			<p class="meta g-12" style="margin-top: var(--row)">
 				<a href={manifest.fallback.url}>Open GitHub Releases</a>
 				{" — "}
+				Linux: after download run{" "}
+				<code class="inline-code">chmod +x Phantasmal-*.AppImage</code>
+				{" · "}
 				macOS builds are unsigned; right-click the app and choose Open the first time
 			</p>
 		</section>
@@ -151,7 +154,11 @@ const sourceUrl = "https://github.com/Nevnet99/phantasmal";
 				primaryLink.setAttribute("data-platform", match.id);
 				primaryLink.removeAttribute("download");
 				primaryLabel.textContent = `Download for ${match.label}`;
-				primaryHint.textContent = `${match.hint} · ${match.file}`;
+				if (match.id === "linux") {
+					primaryHint.textContent = `${match.hint} · then: chmod +x ${match.file}`;
+				} else {
+					primaryHint.textContent = `${match.hint} · ${match.file}`;
+				}
 			} else {
 				primaryLabel.textContent = "Choose a platform";
 				primaryHint.textContent = "System not detected — pick Linux, macOS, or Windows below.";
