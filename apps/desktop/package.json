@@ -61,6 +61,7 @@
 	"build": {
 		"appId": "com.nevnet99.phantasmal",
 		"productName": "Phantasmal",
+		"executableName": "Phantasmal",
 		"icon": "build/icon.png",
 		"directories": {
 			"output": "release"
@@ -82,7 +83,10 @@
 				"AppImage"
 			],
 			"category": "Office",
-			"synopsis": "Local-first Atomic Habits workspace"
+			"synopsis": "Local-first Atomic Habits workspace",
+			"executableName": "Phantasmal",
+			"desktopName": "Phantasmal",
+			"syncDesktopName": true
 		},
 		"mac": {
 			"target": [
@@ -94,7 +98,8 @@
 		"win": {
 			"target": [
 				"nsis"
-			]
+			],
+			"executableName": "Phantasmal"
 		},
 		"nsis": {
 			"oneClick": false,
