@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openConfiguredVault, registerVaultIpc, syncNativeThemeFromConfig } from "./ipc";
+import { installAppImageDesktopEntry } from "./linux-desktop";
 import { setupAutoUpdater } from "./updater";
 import { closeVault } from "./vault/fs-vault";
 
@@ -47,6 +48,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+	installAppImageDesktopEntry();
 	registerVaultIpc(getPaths);
 	syncNativeThemeFromConfig(getPaths().userData);
 	openConfiguredVault(getPaths());
