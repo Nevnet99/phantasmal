@@ -55,7 +55,7 @@ Each habit is one JSON file under `habits/` (name, cue, note, schedule, completi
 optional archive metadata).
 Each identity is one JSON file under `identity/` (statement, note, linked habit ids,
 optional archive metadata).
-**Track** covers today’s list, month calendar, contribution graph, and check-offs.
+**Track** covers today’s list, month calendar, habit×day completion graph, and check-offs.
 Add habits with **New habit**; edit with the **Edit** control beside each row.
 Click the habit card to complete it. **Remove** opens a dialog to archive (keeps graph
 history, optional note) or delete permanently. Browse and restore archived habits under
@@ -66,6 +66,13 @@ habits, and count check-offs on those habits as votes for the identity. Cards sh
 votes, today/this week, and recent evidence. Track groups today’s due list under linked
 identities (a whole stack stays in one group) and shows how many votes are still open.
 Archive identities from the remove dialog; restore under Settings → Habits.
+
+**Journal** is one or more markdown entries per day under
+`journal/YYYY-MM-DD-<hex>.json` (legacy `journal/YYYY-MM-DD.json` still loads).
+Pick a mood with the
+face row, write in a Notion-style live markdown editor (headings, lists, and emphasis style
+as you type), and tag habits inline with `#habit-slug` (autocomplete while typing). Entries
+autosave; blank days leave no file. Use **New entry** to add another page for the same day.
 
 Schedules: `daily`, `weekly` (weekdays + interval weeks, e.g. every other Monday), or
 `every_n_days`. Track only lists habits due on the selected day; streaks count consecutive

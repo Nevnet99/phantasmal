@@ -6,6 +6,7 @@ function record(partial: Pick<HabitRecord, "id" | "name"> & Partial<HabitRecord>
 	return {
 		cue: "",
 		note: "",
+		color: "#5b8c5a",
 		schedule: { type: "daily" },
 		stackAfterId: null,
 		stackOrder: 0,
@@ -22,6 +23,7 @@ function view(partial: Pick<HabitView, "id" | "name"> & Partial<HabitView>): Hab
 	return {
 		cue: "",
 		note: "",
+		color: "#5b8c5a",
 		schedule: { type: "daily" },
 		scheduleLabel: "Every day",
 		stackAfterId: null,

@@ -38,7 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
 		id: "journal",
 		label: "Journal",
 		blurb: "Reflect on cues, cravings, and identity as the days compound.",
-		enabled: false,
+		enabled: true,
 	},
 	{
 		id: "identity",
@@ -46,14 +46,16 @@ export const NAV_ITEMS: NavItem[] = [
 		blurb: "Who you want to become—the deepest layer of behavior change.",
 		enabled: true,
 	},
-	{
-		id: "settings",
-		label: "Settings",
-		blurb: "Density, vault location, and machine preferences.",
-		enabled: true,
-	},
 ];
 
+export const SETTINGS_NAV: NavItem = {
+	id: "settings",
+	label: "Settings",
+	blurb: "Density, vault location, and machine preferences.",
+	enabled: true,
+};
+
 export function navItemById(id: AppRoute): NavItem | undefined {
+	if (id === "settings") return SETTINGS_NAV;
 	return NAV_ITEMS.find((item) => item.id === id);
 }

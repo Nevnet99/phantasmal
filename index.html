@@ -99,6 +99,18 @@
 							</button>
 						</template>
 					</nav>
+					<div class="sidebar__footer">
+						<button
+							type="button"
+							class="sidebar__link sidebar__link--settings"
+							:class="isActive('settings') && 'sidebar__link--active'"
+							:aria-current="isActive('settings') ? 'page' : false"
+							@click="goTo('settings')"
+						>
+							<ds-icon name="settings" size="sm"></ds-icon>
+							<span class="sidebar__link-label">Settings</span>
+						</button>
+					</div>
 				</aside>
 
 				<main id="main" class="shell__main">
@@ -232,6 +244,64 @@
 									<span class="pref-option__hint">Looser spacing and rounder controls.</span>
 								</button>
 							</div>
+
+							<h2 class="settings-panel__title">Track view</h2>
+							<p class="settings-panel__copy">
+								Default activity visualization on Track—habit graph or month calendar.
+							</p>
+							<div class="pref-options pref-options--two" role="radiogroup" aria-label="Track view">
+								<button
+									type="button"
+									class="pref-option"
+									:class="isTrackGraph && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isTrackGraph"
+									@click="setTrackViz('graph')"
+								>
+									<span class="pref-option__label">Graph</span>
+									<span class="pref-option__hint">Habits by day for the month, with streaks.</span>
+								</button>
+								<button
+									type="button"
+									class="pref-option"
+									:class="isTrackCalendar && 'pref-option--active'"
+									role="radio"
+									:aria-checked="isTrackCalendar"
+									@click="setTrackViz('calendar')"
+								>
+									<span class="pref-option__label">Calendar</span>
+									<span class="pref-option__hint">Month grid with daily completion levels.</span>
+								</button>
+							</div>
+
+							<h2 class="settings-panel__title">Journal on graph</h2>
+							<p class="settings-panel__copy">
+								Show a Journal row on the Track graph. Days with a journal entry count as done.
+							</p>
+							<label class="pref-check">
+								<input
+									class="pref-check__input"
+									type="checkbox"
+									:checked="isJournalOnGraph"
+									@change="setJournalOnGraph($event.target.checked)"
+								/>
+								<span class="pref-check__box" aria-hidden="true">
+									<svg class="pref-check__tick" viewBox="0 0 16 16" width="14" height="14">
+										<path
+											d="M3.5 8.2 6.6 11.3 12.5 4.7"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="square"
+											stroke-linejoin="miter"
+										/>
+									</svg>
+								</span>
+								<span class="pref-check__copy">
+									<span class="pref-check__label">Show journal on graph</span>
+									<span class="pref-check__hint">Track journaling alongside habits.</span>
+								</span>
+							</label>
 						</div>
 
 						<div
@@ -372,7 +442,25 @@
 							<div class="track__heading">
 								<h1 id="track-title" class="panel__title">Track</h1>
 								<p class="track__status">
-									<span class="track__date" x-text="track.selectedLabel"></span>
+									<button
+										type="button"
+										class="date-picker"
+										@click="openTrackMonthPicker()"
+										:aria-label="'Pick month: ' + track.calendarMonthLabel"
+									>
+										<ds-icon name="calendar_month" size="sm"></ds-icon>
+										<span class="date-picker__value" x-text="track.calendarMonthLabel"></span>
+										<ds-icon name="expand_more" size="sm"></ds-icon>
+									</button>
+									<input
+										type="month"
+										class="date-picker__input"
+										x-ref="trackMonth"
+										:value="trackMonthValue"
+										@change="onTrackMonthChange($event)"
+										tabindex="-1"
+										aria-hidden="true"
+									/>
 									<span class="track__sep" aria-hidden="true">·</span>
 									<span x-text="track.summaryLabel"></span>
 								</p>
@@ -403,25 +491,15 @@
 						<div class="track__body" x-show="!trackEmpty">
 							<section class="track__viz" aria-labelledby="viz-title">
 								<div class="track__viz-bar">
-									<ds-toggle
-										id="track-viz-toggle"
-										class="track__viz-toggle"
-										aria-label="Activity view"
-										:value="trackViz"
-										@ds-change="onTrackVizChange($event)"
+									<button
+										type="button"
+										class="ds-btn track__viz-settings"
+										title="Track view settings"
+										aria-label="Track view settings"
+										@click="openTrackVizSettings()"
 									>
-										<button type="button" data-value="graph" title="Graph" aria-label="Graph">
-											<ds-icon name="grid_view" size="sm"></ds-icon>
-										</button>
-										<button
-											type="button"
-											data-value="calendar"
-											title="Calendar"
-											aria-label="Calendar"
-										>
-											<ds-icon name="calendar_month" size="sm"></ds-icon>
-										</button>
-									</ds-toggle>
+										<ds-icon name="settings" size="sm"></ds-icon>
+									</button>
 								</div>
 
 								<h2 id="viz-title" class="visually-hidden">Activity</h2>
@@ -429,31 +507,71 @@
 								<div
 									class="track__graph"
 									id="viz-panel-graph"
-									aria-label="Contribution graph"
+									aria-label="Habit completion graph"
 									x-show="isTrackGraph"
 								>
-									<div class="graph" role="grid" aria-label="Habit activity over the last year">
-										<template x-for="cell in track.graph" :key="cell.day">
-											<button
-												type="button"
-												:class="graphLevelClass(cell)"
-												:aria-label="cell.label"
-												@mouseenter="showDayPop($event, cell)"
-												@mouseleave="hideDayPop()"
-												@focus="showDayPop($event, cell)"
-												@blur="hideDayPop()"
-												@click="selectDay(cell.day)"
-											></button>
+									<div
+										class="habit-graph"
+										role="table"
+										aria-label="Habits by day for the selected month"
+										:style="habitGraphStyle"
+									>
+										<div class="habit-graph__corner" aria-hidden="true"></div>
+										<div class="habit-graph__days" role="row">
+											<template x-for="day in track.habitGraph.days" :key="day.day">
+												<button
+													type="button"
+													:class="habitGraphDayClass(day)"
+													:title="day.label"
+													:aria-label="day.label"
+													:aria-current="day.isSelected ? 'date' : false"
+													@click="selectDay(day.day)"
+												>
+													<span class="habit-graph__weekday" x-text="day.weekday"></span>
+													<span class="habit-graph__daynum" x-text="day.dayNum"></span>
+												</button>
+											</template>
+										</div>
+										<div class="habit-graph__streak-head" title="Streak">Streak</div>
+										<template x-for="row in track.habitGraph.rows" :key="row.habitId + row.color">
+											<div
+												class="habit-graph__row"
+												role="row"
+												:style="'--habit-color: ' + row.color"
+											>
+												<button
+													type="button"
+													class="habit-graph__label habit-graph__label--link"
+													x-show="isJournalGraphRow(row)"
+													title="Open journal"
+													@click="onHabitGraphRowLabelClick(row.habitId)"
+													x-text="row.name"
+												></button>
+												<div
+													class="habit-graph__label"
+													x-show="!isJournalGraphRow(row)"
+													x-text="row.name"
+													:title="row.name"
+												></div>
+												<div class="habit-graph__cells">
+													<template x-for="cell in row.cells" :key="cell.key">
+														<button
+															type="button"
+															:class="habitGraphCellClass(cell)"
+															:title="cell.label"
+															:aria-label="cell.label"
+															@click="onHabitGraphCellClick(cell)"
+														></button>
+													</template>
+												</div>
+												<div
+													class="habit-graph__streak"
+													:title="row.streakLabel"
+													:aria-label="row.streakLabel"
+													x-text="row.streak"
+												></div>
+											</div>
 										</template>
-									</div>
-									<div class="graph__legend" aria-hidden="true">
-										<span>Less</span>
-										<span class="graph__cell graph__cell--l0"></span>
-										<span class="graph__cell graph__cell--l1"></span>
-										<span class="graph__cell graph__cell--l2"></span>
-										<span class="graph__cell graph__cell--l3"></span>
-										<span class="graph__cell graph__cell--l4"></span>
-										<span>More</span>
 									</div>
 								</div>
 
@@ -508,6 +626,50 @@
 										</div>
 									</div>
 								</div>
+							</section>
+
+							<header class="track__day">
+								<h2 class="track__day-title" x-text="track.selectedLabel"></h2>
+								<p class="track__day-meta" x-text="track.summaryLabel"></p>
+							</header>
+
+							<section
+								class="track-journal"
+								x-show="hasTrackJournalEntries"
+								aria-labelledby="track-journal-title"
+							>
+								<div class="track-journal__head">
+									<h3 id="track-journal-title" class="track-journal__title">Journal</h3>
+									<button
+										type="button"
+										class="track-journal__all"
+										@click="openTrackJournalDay(selectedDay)"
+									>
+										Open day
+									</button>
+								</div>
+								<ul class="track-journal__list">
+									<template x-for="entry in track.journalEntries" :key="entry.id">
+										<li>
+											<button
+												type="button"
+												class="track-journal__link"
+												@click="openTrackJournalEntry(entry)"
+											>
+												<span class="track-journal__time" x-text="entry.timeLabel"></span>
+												<span
+													class="track-journal__name"
+													x-text="entry.title || entry.preview || 'Untitled entry'"
+												></span>
+												<span
+													class="track-journal__mood"
+													x-show="entry.moodLabel"
+													x-text="entry.moodLabel"
+												></span>
+											</button>
+										</li>
+									</template>
+								</ul>
 							</section>
 
 							<p class="panel__hint" x-show="nothingDue">Nothing scheduled for this day.</p>
@@ -670,6 +832,23 @@
 									x-model="createNote"
 								></textarea>
 							</label>
+
+							<div class="field">
+								<span class="field__label">Color</span>
+								<p class="field__help">Used on the Track graph and journal tags.</p>
+								<ds-color-picker
+									aria-label="Habit color"
+									@ds-change="onCreateColorChange($event)"
+								></ds-color-picker>
+								<div class="habit-tag-preview" :style="'--habit-color: ' + createColor">
+									<span class="habit-tag-preview__label">Tag preview</span>
+									<span class="journal-linked__item habit-tag-preview__chip">
+										<span class="journal-linked__swatch" aria-hidden="true"></span>
+										<span class="journal-linked__tag" x-text="journalHashTag(createTagSlug)"></span>
+										<span x-text="createPreviewName"></span>
+									</span>
+								</div>
+							</div>
 
 							<label class="field" x-show="hasStackOptions">
 								<span class="field__label"
@@ -920,6 +1099,201 @@
 								</li>
 							</template>
 						</ul>
+					</section>
+
+					<section
+						class="panel panel--wide journal"
+						x-show="isJournal"
+						aria-labelledby="journal-title"
+					>
+						<header class="journal__header">
+							<div class="journal__heading">
+								<h1 id="journal-title" class="panel__title">Journal</h1>
+								<p class="journal__status">
+									<button
+										type="button"
+										class="date-picker"
+										@click="openJournalDayPicker()"
+										:aria-label="'Pick day: ' + journalDayLabel"
+									>
+										<ds-icon name="calendar_month" size="sm"></ds-icon>
+										<span class="date-picker__value" x-text="journalDayLabel"></span>
+										<ds-icon name="expand_more" size="sm"></ds-icon>
+									</button>
+									<input
+										type="date"
+										class="date-picker__input"
+										x-ref="journalDay"
+										:value="journalDayValue"
+										@change="onJournalDayChange($event)"
+										tabindex="-1"
+										aria-hidden="true"
+									/>
+									<span class="track__sep" aria-hidden="true">·</span>
+									<span x-text="journalStatusLabel"></span>
+								</p>
+							</div>
+							<div class="journal__nav">
+								<button
+									type="button"
+									class="ds-btn"
+									title="Previous day"
+									aria-label="Previous day"
+									@click="shiftJournalDay(-1)"
+								>
+									<ds-icon name="chevron_left" size="sm"></ds-icon>
+								</button>
+								<button
+									type="button"
+									class="ds-btn"
+									x-show="!journalIsToday"
+									@click="goJournalToday()"
+								>
+									Today
+								</button>
+								<button
+									type="button"
+									class="ds-btn"
+									title="Next day"
+									aria-label="Next day"
+									@click="shiftJournalDay(1)"
+								>
+									<ds-icon name="chevron_right" size="sm"></ds-icon>
+								</button>
+								<button
+									type="button"
+									class="ds-btn ds-btn--primary"
+									@click="startNewJournalEntry()"
+								>
+									New entry
+								</button>
+							</div>
+						</header>
+
+						<p class="setup__error" x-show="journalError" x-text="journalError" role="alert"></p>
+
+						<section
+							class="journal-day-entries"
+							x-show="hasJournalDayEntries"
+							aria-label="Entries for this day"
+						>
+							<template x-for="entry in journalDayEntries" :key="entry.id">
+								<button
+									type="button"
+									:class="journalEntryButtonClass(entry)"
+									@click="selectJournalEntry(entry.id)"
+								>
+									<span class="journal-day-entries__time" x-text="entry.timeLabel"></span>
+									<span
+										class="journal-day-entries__title"
+										x-text="entry.title || entry.preview || 'Untitled entry'"
+									></span>
+									<span
+										class="journal-day-entries__mood"
+										x-show="entry.moodLabel"
+										x-text="entry.moodLabel"
+									></span>
+								</button>
+							</template>
+						</section>
+
+						<div class="journal-empty" x-show="journalDayEmpty">
+							<p class="journal-empty__copy" x-text="journalEmptyLabel"></p>
+							<button type="button" class="ds-btn ds-btn--primary" @click="startNewJournalEntry()">
+								Write an entry
+							</button>
+						</div>
+
+						<div class="journal-compose" x-show="journalShowEditor">
+							<section class="journal-moods" aria-label="Mood">
+								<p class="journal-moods__label">How are you feeling?</p>
+								<div class="journal-moods__row" role="group" aria-label="Mood">
+									<template x-for="mood in journalMoods" :key="mood.id">
+										<button
+											type="button"
+											:class="moodButtonClass(mood.id)"
+											:aria-pressed="isJournalMood(mood.id)"
+											:title="mood.label"
+											:aria-label="mood.label"
+											@click="setJournalMood(mood.id)"
+										>
+											<ds-icon :name="mood.icon" size="sm"></ds-icon>
+										</button>
+									</template>
+								</div>
+							</section>
+
+							<div class="journal-editor">
+								<input
+									class="journal-editor__title"
+									type="text"
+									name="journal-title"
+									placeholder="Title"
+									autocomplete="off"
+									x-model="journalTitle"
+									@input="scheduleJournalSave()"
+								/>
+
+								<div class="journal-editor__body-wrap">
+									<ds-markdown-editor
+										id="journal-md"
+										class="journal-editor__md"
+										placeholder="Write in markdown. Type # to tag a habit…"
+										:value="journalBody"
+										:habits="journalHabitOptions"
+										@ds-change="onJournalEditorChange($event)"
+										@ds-tag-query="onJournalTagQuery($event)"
+									></ds-markdown-editor>
+
+									<ul class="journal-tag-menu" x-show="hasJournalTagSuggestions" x-cloak>
+										<template x-for="option in journalTagSuggestions" :key="option.id">
+											<li>
+												<button
+													type="button"
+													class="journal-tag-menu__item"
+													:style="'--habit-color: ' + option.color"
+													@click="insertJournalHabitTag(option)"
+												>
+													<span class="journal-tag-menu__swatch" aria-hidden="true"></span>
+													<span
+														class="journal-tag-menu__tag"
+														x-text="journalHashTag(option.tag)"
+													></span>
+													<span class="journal-tag-menu__name" x-text="option.name"></span>
+												</button>
+											</li>
+										</template>
+									</ul>
+								</div>
+							</div>
+						</div>
+
+						<section
+							class="journal-recent"
+							x-show="hasJournalRecent"
+							aria-labelledby="journal-recent-title"
+						>
+							<h2 id="journal-recent-title" class="journal-recent__title">Recent entries</h2>
+							<ul class="journal-recent__list">
+								<template x-for="entry in journalRecent" :key="entry.id">
+									<li>
+										<button
+											type="button"
+											class="journal-recent__item"
+											@click="selectJournalRecent(entry)"
+										>
+											<span class="journal-recent__day" x-text="entry.dayLabel"></span>
+											<span class="journal-recent__preview" x-text="entry.preview"></span>
+											<span
+												class="journal-recent__mood"
+												x-show="entry.moodLabel"
+												x-text="entry.moodLabel"
+											></span>
+										</button>
+									</li>
+								</template>
+							</ul>
+						</section>
 					</section>
 
 					<section class="panel" x-show="isStub" aria-labelledby="stub-title">

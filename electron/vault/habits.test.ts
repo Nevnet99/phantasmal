@@ -72,11 +72,12 @@ describe("habits vault", () => {
 		expect(updated.note).toBe("Easy start");
 	});
 
-	it("builds a track snapshot with graph and calendar", () => {
+	it("builds a track snapshot with habit graph and calendar", () => {
 		tempVault();
 		createHabit({ name: "Walk" }, "2026-09-08");
 		const snap = getTrackSnapshot({ selectedDay: "2026-09-08", month: 9, year: 2026 });
-		expect(snap.graph).toHaveLength(53 * 7);
+		expect(snap.habitGraph.days).toHaveLength(30);
+		expect(snap.habitGraph.rows).toHaveLength(1);
 		expect(snap.calendarCells.length).toBeGreaterThan(28);
 		expect(snap.totalCount).toBe(1);
 	});
@@ -106,6 +107,19 @@ describe("habits vault", () => {
 		expect(() => createHabit({ name: "   " }, "2026-09-08")).toThrow(/Name a habit/);
 	});
 
+	it("persists a chosen color onto the habit graph", () => {
+		tempVault();
+		const habit = createHabit({ name: "Walk", color: "#4f7cac" }, "2026-09-08");
+		expect(habit.color).toBe("#4f7cac");
+		const snap = getTrackSnapshot({ selectedDay: "2026-09-08", month: 9, year: 2026 });
+		expect(snap.habitGraph.rows.find((row) => row.habitId === habit.id)?.color).toBe("#4f7cac");
+
+		const updated = updateHabit(habit.id, { name: "Walk", color: "#b85c4a" }, "2026-09-08");
+		expect(updated.color).toBe("#b85c4a");
+		const next = getTrackSnapshot({ selectedDay: "2026-09-08", month: 9, year: 2026 });
+		expect(next.habitGraph.rows.find((row) => row.habitId === habit.id)?.color).toBe("#b85c4a");
+	});
+
 	it("archives a habit out of the list while keeping graph history", () => {
 		tempVault();
 		const habit = createHabit({ name: "Walk" }, "2026-09-07");
@@ -117,8 +131,9 @@ describe("habits vault", () => {
 		expect(archived).toHaveLength(1);
 		expect(archived[0]?.archiveNote).toBe("Travel week");
 		const snap = getTrackSnapshot({ selectedDay: "2026-09-08", month: 9, year: 2026 });
-		const past = snap.graph.find((cell) => cell.day === "2026-09-07");
-		expect(past?.doneNames).toEqual(["Walk"]);
+		const row = snap.habitGraph.rows.find((item) => item.habitId === habit.id);
+		const dayIndex = snap.habitGraph.days.findIndex((day) => day.day === "2026-09-07");
+		expect(row?.cells[dayIndex]?.state).toBe("done");
 	});
 
 	it("restores an archived habit", () => {

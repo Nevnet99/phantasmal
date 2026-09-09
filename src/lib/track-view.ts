@@ -2,11 +2,15 @@ import type {
 	ActivityLevel,
 	CalendarCell,
 	DayKey,
-	GraphCell,
+	HabitGraph,
+	HabitGraphCell,
+	HabitGraphDay,
+	HabitGraphRow,
 	HabitRecord,
 	HabitView,
 	TrackSnapshot,
 } from "../shared/habits";
+import { JOURNAL_GRAPH_COLOR, JOURNAL_GRAPH_ID, JOURNAL_GRAPH_NAME } from "../shared/habits";
 import {
 	daysInMonth,
 	formatDayLabel,
@@ -15,6 +19,7 @@ import {
 	mondayIndex,
 	shiftDayKey,
 } from "./day";
+import { resolveHabitColor } from "./habit-color";
 import { isDueOn, scheduleLabel, streakOnSchedule } from "./schedule";
 import {
 	canMoveStackDown,
@@ -79,6 +84,7 @@ export function toHabitView(
 		name: habit.name,
 		cue: habit.cue,
 		note: habit.note,
+		color: resolveHabitColor(habit.color, habit.id),
 		schedule: habit.schedule,
 		scheduleLabel: scheduleLabel(habit.schedule),
 		stackAfterId: habit.stackAfterId,
@@ -106,33 +112,142 @@ export function toHabitViews(habits: HabitRecord[], day: DayKey): HabitView[] {
 	return habits.map((habit) => toHabitView(habit, day, byId, active));
 }
 
-/** GitHub-style contribution grid: 53 weeks × 7 days (Sun→Sat), ending on `endDay`. */
-export function buildContributionGraph(habits: HabitRecord[], endDay: DayKey): GraphCell[] {
-	const cells: GraphCell[] = [];
-	const end = new Date(
-		Number(endDay.slice(0, 4)),
-		Number(endDay.slice(5, 7)) - 1,
-		Number(endDay.slice(8, 10)),
-	);
-	const endDow = end.getDay(); // 0 Sun
-	const gridEnd = shiftDayKey(endDay, 6 - endDow);
-	const start = shiftDayKey(gridEnd, -(53 * 7 - 1));
+const WEEKDAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
-	for (let i = 0; i < 53 * 7; i += 1) {
-		const day = shiftDayKey(start, i);
-		const { completed, total, doneNames, missedNames } = dayStats(habits, day);
-		const level = activityLevel(completed, total);
-		cells.push({
+/** Habit × day matrix for a calendar month. */
+export function buildHabitGraph(
+	habits: HabitRecord[],
+	year: number,
+	month: number,
+	todayKey: DayKey,
+	selectedDay: DayKey,
+	journaledDays: ReadonlySet<DayKey> | null = null,
+	journalGraphSince: DayKey | null = null,
+): HabitGraph {
+	const days: HabitGraphDay[] = [];
+	const count = daysInMonth(year, month);
+	for (let dayNum = 1; dayNum <= count; dayNum += 1) {
+		const day = localDayKey(new Date(year, month - 1, dayNum));
+		days.push({
 			day,
-			level,
-			completed,
-			total,
-			doneNames,
-			missedNames,
-			label: `${formatDayLabel(day)}: ${completed} of ${total} due`,
+			weekday: WEEKDAY_LETTERS[mondayIndex(year, month, dayNum)] ?? "",
+			dayNum: String(dayNum),
+			isToday: day === todayKey,
+			isSelected: day === selectedDay,
+			label: formatDayLabel(day),
 		});
 	}
-	return cells;
+
+	const dayKeys = days.map((item) => item.day);
+	const active = habits.filter((habit) => !habit.archivedAt);
+	const archived = habits.filter((habit) => habit.archivedAt);
+	const orderedActive = orderByStack(toHabitViews(active, selectedDay));
+	const archivedRelevant = archived
+		.filter((habit) =>
+			dayKeys.some((day) => isHabitActiveOn(habit, day) && isDueOn(habit.schedule, day)),
+		)
+		.sort((a, b) => a.name.localeCompare(b.name));
+
+	const rowHabits: HabitRecord[] = [
+		...orderedActive
+			.map((view) => active.find((habit) => habit.id === view.id))
+			.filter((habit): habit is HabitRecord => Boolean(habit)),
+		...archivedRelevant,
+	];
+
+	const rows: HabitGraphRow[] = rowHabits.map((habit) => {
+		const completions = new Set(habit.completions);
+		const streak = streakOnSchedule(habit.completions, habit.schedule, selectedDay);
+		const cells: HabitGraphCell[] = dayKeys.map((day) => {
+			const due = isHabitActiveOn(habit, day) && isDueOn(habit.schedule, day);
+			const done = completions.has(day);
+			const future = day > todayKey;
+			const state = !due || (future && !done) ? "off" : done ? "done" : "missed";
+			const status =
+				state === "done" ? "done" : state === "missed" ? "missed" : future ? "upcoming" : "not due";
+			return {
+				key: `${habit.id}-${day}`,
+				habitId: habit.id,
+				day,
+				state,
+				done,
+				label: `${habit.name} · ${formatDayLabel(day)} · ${status}`,
+			};
+		});
+		return {
+			habitId: habit.id,
+			name: habit.name,
+			color: resolveHabitColor(habit.color, habit.id),
+			streak,
+			streakLabel: streak === 1 ? "Streak: 1 day" : `Streak: ${streak} days`,
+			cells,
+		};
+	});
+
+	if (journaledDays) {
+		rows.unshift(
+			buildJournalGraphRow(
+				dayKeys,
+				journaledDays,
+				todayKey,
+				selectedDay,
+				journalGraphSince ?? todayKey,
+			),
+		);
+	}
+
+	return { days, rows };
+}
+
+function journalStreakFromSince(
+	journaledDays: ReadonlySet<DayKey>,
+	since: DayKey,
+	endDay: DayKey,
+): number {
+	let cursor = journaledDays.has(endDay) ? endDay : shiftDayKey(endDay, -1);
+	if (cursor < since || !journaledDays.has(cursor)) {
+		return 0;
+	}
+	let streak = 0;
+	while (cursor >= since && journaledDays.has(cursor)) {
+		streak += 1;
+		cursor = shiftDayKey(cursor, -1);
+	}
+	return streak;
+}
+
+function buildJournalGraphRow(
+	dayKeys: DayKey[],
+	journaledDays: ReadonlySet<DayKey>,
+	todayKey: DayKey,
+	selectedDay: DayKey,
+	journalSince: DayKey,
+): HabitGraphRow {
+	const streakEnd = selectedDay <= todayKey ? selectedDay : todayKey;
+	const streak = journalStreakFromSince(journaledDays, journalSince, streakEnd);
+	const cells: HabitGraphCell[] = dayKeys.map((day) => {
+		const done = journaledDays.has(day);
+		const tracking = day >= journalSince;
+		const future = day > todayKey;
+		const state = (!tracking && !done) || (future && !done) ? "off" : done ? "done" : "missed";
+		const status = state === "done" ? "journaled" : state === "missed" ? "missed" : "upcoming";
+		return {
+			key: `${JOURNAL_GRAPH_ID}-${day}`,
+			habitId: JOURNAL_GRAPH_ID,
+			day,
+			state,
+			done,
+			label: `${JOURNAL_GRAPH_NAME} · ${formatDayLabel(day)} · ${status}`,
+		};
+	});
+	return {
+		habitId: JOURNAL_GRAPH_ID,
+		name: JOURNAL_GRAPH_NAME,
+		color: JOURNAL_GRAPH_COLOR,
+		streak,
+		streakLabel: streak === 1 ? "Streak: 1 day" : `Streak: ${streak} days`,
+		cells,
+	};
 }
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -215,6 +330,9 @@ export function buildTrackSnapshot(
 	year: number,
 	todayKey: DayKey = localDayKey(),
 	identities: IdentityLink[] = [],
+	journaledDays: ReadonlySet<DayKey> | null = null,
+	journalGraphSince: DayKey | null = null,
+	journalEntries: TrackSnapshot["journalEntries"] = [],
 ): TrackSnapshot {
 	const views = orderByStack(toHabitViews(habits, selectedDay).filter((habit) => habit.due));
 	const remaining = views.filter((habit) => !habit.done);
@@ -223,7 +341,7 @@ export function buildTrackSnapshot(
 	const remainingCount = remaining.length;
 
 	let summaryLabel = "Nothing scheduled";
-	if (habits.length === 0) {
+	if (habits.length === 0 && !journaledDays) {
 		summaryLabel = "No habits yet";
 	} else if (totalCount > 0) {
 		if (remainingCount === 0) {
@@ -245,17 +363,27 @@ export function buildTrackSnapshot(
 		selectedLabel: formatDayLabel(selectedDay),
 		isSelectedToday: selectedDay === todayKey,
 		summaryLabel,
+		hasHabits: habits.length > 0 || Boolean(journaledDays),
 		remainingCount,
 		doneCount,
 		totalCount,
 		habits: views,
 		remaining,
 		groups: buildTrackGroups(views, identities, selectedDay === todayKey),
-		graph: buildContributionGraph(habits, todayKey),
+		habitGraph: buildHabitGraph(
+			habits,
+			year,
+			month,
+			todayKey,
+			selectedDay,
+			journaledDays,
+			journalGraphSince,
+		),
 		weekdays: WEEKDAYS,
 		calendarMonthLabel: formatMonthLabel(year, month),
 		calendarYear: year,
 		calendarMonth: month,
 		calendarCells: buildMonthCalendar(habits, year, month, todayKey, selectedDay),
+		journalEntries,
 	};
 }

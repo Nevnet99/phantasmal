@@ -10,7 +10,9 @@ import type {
 	TrackQuery,
 	TrackSnapshot,
 } from "../../src/shared/habits";
+import { isDayKey } from "../../src/shared/habits";
 import { buildTrackSnapshot, toHabitView, toHabitViews } from "../../src/lib/track-view";
+import { isHabitColor, randomHabitColor, resolveHabitColor } from "../../src/lib/habit-color";
 import { normalizeSchedule } from "../../src/lib/schedule";
 import {
 	moveStackAmong,
@@ -19,9 +21,11 @@ import {
 	wouldCreateStackCycle,
 } from "../../src/lib/stack";
 import { isHabitActiveOn } from "../../src/lib/habit-status";
+import { habitTagSlug } from "../../src/lib/journal-markdown";
 import { HABITS_DIRNAME } from "./schema";
 import { getOpenVault, writeJsonAtomic } from "./fs-vault";
 import { loadActiveIdentities } from "./identity";
+import { loadJournaledDays, listJournalSummariesForDay } from "./journal";
 
 function habitsDir(vaultPath: string): string {
 	return path.join(vaultPath, HABITS_DIRNAME);
@@ -68,6 +72,7 @@ function parseHabitRecord(value: unknown): HabitRecord | null {
 		name: record.name,
 		cue: record.cue,
 		note: record.note,
+		color: resolveHabitColor(typeof record.color === "string" ? record.color : null, record.id),
 		schedule: normalizeSchedule(record.schedule, fallbackAnchor),
 		stackAfterId: normalizeStackAfterId(record.stackAfterId),
 		stackOrder: normalizeStackOrder(record.stackOrder),
@@ -171,6 +176,14 @@ export function getTrackSnapshot(query: TrackQuery): TrackSnapshot {
 		statement: identity.statement,
 		habitIds: identity.habitIds,
 	}));
+	const journaledDays = query.includeJournalGraph ? new Set(loadJournaledDays()) : null;
+	const journalGraphSince =
+		query.includeJournalGraph && isDayKey(query.journalGraphSince)
+			? query.journalGraphSince
+			: query.includeJournalGraph
+				? query.selectedDay
+				: null;
+	const journalEntries = listJournalSummariesForDay(query.selectedDay);
 	return buildTrackSnapshot(
 		loadHabits(),
 		query.selectedDay,
@@ -178,6 +191,9 @@ export function getTrackSnapshot(query: TrackQuery): TrackSnapshot {
 		query.year,
 		undefined,
 		identities,
+		journaledDays,
+		journalGraphSince,
+		journalEntries,
 	);
 }
 
@@ -200,6 +216,7 @@ export function createHabit(draft: HabitDraft, day: DayKey): HabitView {
 		name,
 		cue: (draft.cue ?? "").trim(),
 		note: (draft.note ?? "").trim(),
+		color: isHabitColor(draft.color) ? draft.color.toLowerCase() : randomHabitColor(),
 		schedule,
 		stackAfterId,
 		stackOrder: nextStackOrder(existing, stackAfterId),
@@ -248,6 +265,7 @@ export function updateHabit(id: string, draft: HabitDraft, day: DayKey): HabitVi
 		name,
 		cue: (draft.cue ?? "").trim(),
 		note: (draft.note ?? "").trim(),
+		color: isHabitColor(draft.color) ? draft.color.toLowerCase() : habit.color,
 		schedule,
 		stackAfterId,
 		stackOrder,
@@ -354,22 +372,26 @@ export function restoreHabit(id: string, day: DayKey): HabitView {
 	return toHabitView(next, day, byId);
 }
 
-export function removeHabit(id: string): void {
+export function removeHabit(id: string): { id: string; tag: string } {
 	const vaultPath = requireOpenVaultPath();
 	const filePath = habitFilePath(vaultPath, id);
-	if (!fs.existsSync(filePath)) {
+	const habit = readHabitFile(filePath);
+	if (!habit) {
 		throw new Error("That habit file is missing or invalid.");
 	}
+	const tag = habitTagSlug(habit.name);
 
 	fs.unlinkSync(filePath);
 
-	for (const habit of loadHabits()) {
-		if (habit.stackAfterId !== id) continue;
+	for (const stacked of loadHabits()) {
+		if (stacked.stackAfterId !== id) continue;
 		const next: HabitRecord = {
-			...habit,
+			...stacked,
 			stackAfterId: null,
 			updatedAt: new Date().toISOString(),
 		};
 		writeHabit(vaultPath, next);
 	}
+
+	return { id, tag };
 }

@@ -1,8 +1,11 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import {
 	defaultVaultPath,
+	ensureJournalOnGraphSince,
 	readConfig,
 	setDailyReminder,
+	setJournalOnGraph,
+	setTrackViz,
 	setUiDensity,
 	setUiTheme,
 	setVaultPath,
@@ -31,8 +34,16 @@ import {
 	updateIdentity,
 } from "./vault/identity";
 import {
+	getJournal,
+	listJournalSummaries,
+	removeJournal,
+	saveJournal,
+	unlinkHabitFromJournals,
+} from "./vault/journal";
+import {
 	REMINDER_CHANNELS,
 	SETTINGS_CHANNELS,
+	isTrackViz,
 	isUiDensity,
 	isUiTheme,
 	type AppPrefs,
@@ -40,6 +51,7 @@ import {
 } from "../src/shared/prefs";
 import { HABIT_CHANNELS, isDayKey, isTrackQuery, type HabitDraft } from "../src/shared/habits";
 import { IDENTITY_CHANNELS, isIdentityDraft } from "../src/shared/identity";
+import { JOURNAL_CHANNELS, isJournalDraft, isJournalGetQuery } from "../src/shared/journal";
 import { VAULT_CHANNELS, type VaultStatus } from "../src/shared/vault";
 
 type Paths = {
@@ -52,11 +64,14 @@ function applyNativeTheme(theme: UiTheme): void {
 }
 
 function prefsFromConfig(userDataDir: string): AppPrefs {
-	const config = readConfig(userDataDir);
+	const config = ensureJournalOnGraphSince(userDataDir);
 	return {
 		uiDensity: config.uiDensity,
 		uiTheme: config.uiTheme,
 		dailyReminder: config.dailyReminder,
+		trackViz: config.trackViz,
+		journalOnGraph: config.journalOnGraph,
+		journalOnGraphSince: config.journalOnGraphSince,
 	};
 }
 
@@ -235,6 +250,22 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		return prefsFromConfig(getPaths().userData);
 	});
 
+	ipcMain.handle(SETTINGS_CHANNELS.setTrackViz, (_event, mode: unknown) => {
+		if (!isTrackViz(mode)) {
+			return prefsFromConfig(getPaths().userData);
+		}
+		setTrackViz(getPaths().userData, mode);
+		return prefsFromConfig(getPaths().userData);
+	});
+
+	ipcMain.handle(SETTINGS_CHANNELS.setJournalOnGraph, (_event, enabled: unknown) => {
+		if (typeof enabled !== "boolean") {
+			return prefsFromConfig(getPaths().userData);
+		}
+		setJournalOnGraph(getPaths().userData, enabled);
+		return prefsFromConfig(getPaths().userData);
+	});
+
 	ipcMain.handle(REMINDER_CHANNELS.syncDueToday, (_event, remaining: unknown, today: unknown) => {
 		if (typeof remaining !== "number" || !isDayKey(today)) {
 			return;
@@ -255,7 +286,12 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		if (!isTrackQuery(query)) {
 			throw new Error("Invalid track query.");
 		}
-		return getTrackSnapshot(query);
+		const config = ensureJournalOnGraphSince(getPaths().userData);
+		return getTrackSnapshot({
+			...query,
+			includeJournalGraph: Boolean(query.includeJournalGraph && config.journalOnGraph),
+			journalGraphSince: config.journalOnGraph ? config.journalOnGraphSince : null,
+		});
 	});
 
 	ipcMain.handle(HABIT_CHANNELS.create, (_event, draft: unknown, today: unknown) => {
@@ -271,6 +307,7 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 				name: record.name,
 				cue: typeof record.cue === "string" ? record.cue : "",
 				note: typeof record.note === "string" ? record.note : "",
+				color: typeof record.color === "string" ? record.color : undefined,
 				schedule: record.schedule,
 				stackAfterId: record.stackAfterId,
 			},
@@ -292,6 +329,7 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 				name: record.name,
 				cue: typeof record.cue === "string" ? record.cue : "",
 				note: typeof record.note === "string" ? record.note : "",
+				color: typeof record.color === "string" ? record.color : undefined,
 				schedule: record.schedule,
 				stackAfterId: record.stackAfterId,
 			},
@@ -338,7 +376,8 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		if (typeof id !== "string") {
 			throw new Error("Invalid remove request.");
 		}
-		removeHabit(id);
+		const removed = removeHabit(id);
+		unlinkHabitFromJournals(removed.id, removed.tag);
 	});
 
 	ipcMain.handle(IDENTITY_CHANNELS.list, () => listIdentities());
@@ -386,5 +425,35 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 			throw new Error("Invalid remove request.");
 		}
 		removeIdentity(id);
+	});
+
+	ipcMain.handle(JOURNAL_CHANNELS.get, (_event, query: unknown) => {
+		if (!isJournalGetQuery(query)) {
+			throw new Error("Invalid journal day.");
+		}
+		return getJournal(query);
+	});
+
+	ipcMain.handle(JOURNAL_CHANNELS.list, () => listJournalSummaries());
+
+	ipcMain.handle(JOURNAL_CHANNELS.save, (_event, draft: unknown) => {
+		if (!isJournalDraft(draft)) {
+			throw new Error("Invalid journal draft.");
+		}
+		return saveJournal({
+			day: draft.day,
+			id: draft.id,
+			mood: draft.mood === undefined ? undefined : draft.mood,
+			title: draft.title,
+			body: draft.body,
+			habitIds: draft.habitIds,
+		});
+	});
+
+	ipcMain.handle(JOURNAL_CHANNELS.remove, (_event, id: unknown) => {
+		if (typeof id !== "string" || !id) {
+			throw new Error("Invalid journal entry.");
+		}
+		removeJournal(id);
 	});
 }
