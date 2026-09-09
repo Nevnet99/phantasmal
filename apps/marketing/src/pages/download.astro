@@ -75,18 +75,15 @@ const sourceUrl = "https://github.com/Nevnet99/phantasmal";
 
 			{
 				platforms.map((p) => {
-					const href = p.url ?? p.githubUrl ?? manifest.fallback.url;
+					// Prefer GitHub Release assets — same-origin /downloads/ is LFS and
+					// often serves pointer text on hosts that don't smudge LFS.
+					const href = p.githubUrl ?? p.url ?? manifest.fallback.url;
 					return (
 						<div class="platform-band" data-platform-row={p.id}>
 							<p class="platform__label g-3 g-sm-6">{p.label}</p>
 							<p class="platform__hint g-5 g-sm-6">{p.hint}</p>
 							<div class="platform__action g-4 g-sm-12">
-								<a
-									class="btn btn--ghost"
-									href={href}
-									data-platform-link={p.id}
-									{...(p.url ? { download: p.file } : {})}
-								>
+								<a class="btn btn--ghost" href={href} data-platform-link={p.id}>
 									Download
 								</a>
 							</div>
@@ -122,7 +119,7 @@ const sourceUrl = "https://github.com/Nevnet99/phantasmal";
 		const list = platforms;
 
 		function resolveHref(p) {
-			return p.url || p.githubUrl || fallbackUrl;
+			return p.githubUrl || p.url || fallbackUrl;
 		}
 
 		function detect() {
@@ -152,8 +149,7 @@ const sourceUrl = "https://github.com/Nevnet99/phantasmal";
 				const href = resolveHref(match);
 				primaryLink.setAttribute("href", href);
 				primaryLink.setAttribute("data-platform", match.id);
-				if (match.url && match.file) primaryLink.setAttribute("download", match.file);
-				else primaryLink.removeAttribute("download");
+				primaryLink.removeAttribute("download");
 				primaryLabel.textContent = `Download for ${match.label}`;
 				primaryHint.textContent = `${match.hint} · ${match.file}`;
 			} else {
