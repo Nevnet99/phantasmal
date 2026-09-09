@@ -1,0 +1,120 @@
+---
+import Base from "../layouts/Base.astro";
+
+const downloadUrl = "/download";
+const releaseUrl = "https://github.com/Nevnet99/phantasmal/releases/latest";
+const sourceUrl = "https://github.com/Nevnet99/phantasmal";
+
+const practices = [
+	{
+		key: "due today",
+		name: "Track",
+		body: "See what’s due, check it off, and watch the month fill in. Stacks stay in the order you set.",
+	},
+	{
+		key: "who you become",
+		name: "Identity",
+		body: "Write who you’re becoming—“I am a writer”—and link habits. Each check-off counts as a vote.",
+	},
+	{
+		key: "bad habits",
+		name: "Break",
+		body: "Make a habit invisible, unattractive, difficult, and unsatisfying. Mark clean days when you resist.",
+	},
+	{
+		key: "daily notes",
+		name: "Journal",
+		body: "Write in markdown, pick a mood, and tag habits with #slug. Entries save into your vault as you type.",
+	},
+];
+---
+
+<Base>
+	<header class="grid chrome">
+		<a class="chrome__mark g-2 g-sm-2" href="/" aria-label="phantasmal home">
+			<img src="/frog-icon.png" alt="" width="28" height="28" decoding="async" />
+		</a>
+		<nav class="chrome__nav g-10 g-sm-10" aria-label="Primary">
+			<a href={downloadUrl}>download</a>
+			<a href="#features">features</a>
+			<a href={sourceUrl}>github</a>
+		</nav>
+	</header>
+
+	<main id="main">
+		<section class="grid hero" aria-labelledby="brand">
+			<p class="meta meta--accent g-8 g-sm-12">habits on your disk</p>
+			<p class="meta g-4 g-sm-12" style="text-align: end">desktop</p>
+
+			<h1 id="brand" class="display display--xl hero__brand g-12">phantasmal</h1>
+
+			<div class="hero__specimen g-5 g-md-6 g-sm-12">
+				<figure class="specimen">
+					<span class="specimen__label">mark</span>
+					<img
+						class="specimen__img"
+						src="/frog-icon.png"
+						alt=""
+						width="512"
+						height="512"
+						decoding="async"
+					/>
+					<figcaption class="specimen__caption">frog</figcaption>
+				</figure>
+			</div>
+
+			<div class="hero__copy g-7 g-md-6 g-sm-12">
+				<p class="lede hero__lede">
+					A local Atomic Habits workspace. Your data is a folder you control—sync it yourself if you
+					want two machines.
+				</p>
+				<div class="hero__actions actions">
+					<a class="btn btn--primary" href={downloadUrl}>Download</a>
+					<a class="btn btn--ghost" href="#features">See features</a>
+				</div>
+				<p class="meta hero__meta">linux · macos · windows</p>
+			</div>
+		</section>
+
+		<section class="grid" id="features" aria-labelledby="features-title">
+			<p class="meta meta--accent g-3 g-sm-12">features</p>
+			<div class="g-9 g-sm-12">
+				<h2 id="features-title" class="display display--md">Four screens, one vault</h2>
+				<p class="body" style="margin-top: var(--row); max-width: 42ch">
+					No account and no subscription. Put the vault folder in Drive or Dropbox when you need the
+					same data on another computer.
+				</p>
+			</div>
+
+			{
+				practices.map((p) => (
+					<article class="practice g-3 g-md-6 g-sm-12">
+						<span class="practice__key">{p.key}</span>
+						<h3 class="practice__name">{p.name}</h3>
+						<p class="practice__body">{p.body}</p>
+					</article>
+				))
+			}
+		</section>
+
+		<section class="grid" aria-labelledby="vault-title">
+			<p class="meta meta--accent g-3 g-sm-12">files</p>
+			<div class="g-9 g-sm-12">
+				<h2 id="vault-title" class="display display--md">Plain files you can open anywhere</h2>
+				<p class="body" style="margin-top: var(--row); max-width: 48ch">
+					Habits, identities, breaks, and journal pages are JSON and markdown on disk. Edits stay in
+					separate files, so sync tools can merge them cleanly.
+				</p>
+			</div>
+		</section>
+	</main>
+
+	<footer class="grid site-footer">
+		<span class="meta g-4 g-sm-12">phantasmal</span>
+		<nav class="chrome__nav g-8 g-sm-12" aria-label="Footer">
+			<a href={downloadUrl}>download</a>
+			<a href={releaseUrl}>releases</a>
+			<a href={sourceUrl}>source</a>
+		</nav>
+	</footer>
+</Base>

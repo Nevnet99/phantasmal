@@ -1,0 +1,36 @@
+{
+	"version": null,
+	"tag": null,
+	"updatedAt": null,
+	"note": "Filled by the Release workflow after each ship. Until then, download falls back to GitHub Releases.",
+	"platforms": {
+		"linux": {
+			"id": "linux",
+			"label": "Linux",
+			"hint": "AppImage",
+			"file": "phantasmal-linux.AppImage",
+			"url": null,
+			"githubUrl": null
+		},
+		"mac": {
+			"id": "mac",
+			"label": "macOS",
+			"hint": "DMG",
+			"file": "phantasmal-mac.dmg",
+			"url": null,
+			"githubUrl": null
+		},
+		"windows": {
+			"id": "windows",
+			"label": "Windows",
+			"hint": "Installer",
+			"file": "phantasmal-windows.exe",
+			"url": null,
+			"githubUrl": null
+		}
+	},
+	"fallback": {
+		"url": "https://github.com/Nevnet99/phantasmal/releases/latest",
+		"label": "All releases on GitHub"
+	}
+}

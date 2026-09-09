@@ -1,0 +1,6 @@
+# Electron installers served by the marketing download page
+apps/marketing/public/downloads/*.AppImage filter=lfs diff=lfs merge=lfs -text
+apps/marketing/public/downloads/*.dmg filter=lfs diff=lfs merge=lfs -text
+apps/marketing/public/downloads/*.exe filter=lfs diff=lfs merge=lfs -text
+apps/marketing/public/downloads/*.zip filter=lfs diff=lfs merge=lfs -text
+apps/marketing/public/downloads/*.blockmap filter=lfs diff=lfs merge=lfs -text

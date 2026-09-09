@@ -1,0 +1,42 @@
+---
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import "../styles/global.css";
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = "phantasmal — local Atomic Habits workspace",
+	description = "Track habits, shape identity, break bad habits, and journal. Data lives in a folder on your disk.",
+} = Astro.props;
+
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : Astro.url.href;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content={description} />
+		<meta name="theme-color" content="#363938" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:image" content="/frog-icon.png" />
+		<link rel="canonical" href={canonical} />
+		<link rel="icon" type="image/png" href="/frog-icon.png" />
+		<title>{title}</title>
+	</head>
+	<body>
+		<a class="skip" href="#main">Skip to content</a>
+		<div class="site">
+			<slot />
+		</div>
+	</body>
+</html>

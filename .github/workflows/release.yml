@@ -1,7 +1,11 @@
 name: Release
 
 # Manual publish: Actions → Release → Run workflow
-# Optional: push a tag like v0.0.2 (must match package.json version)
+# Optional: push a tag like v0.0.2 (must match apps/desktop/package.json version)
+#
+# After installers publish to GitHub Releases, a follow-up job downloads them into
+# apps/marketing/public/downloads/ (Git LFS) and opens a PR so the site can serve
+# OS-specific downloads from /download.
 on:
   workflow_dispatch:
     inputs:
@@ -10,7 +14,7 @@ on:
         required: false
         type: string
       draft:
-        description: "Publish as a draft GitHub Release"
+        description: "Publish as a draft GitHub Release (skips site download PR)"
         required: false
         type: boolean
         default: false
@@ -24,10 +28,45 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      draft: ${{ steps.ver.outputs.draft }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="apps/desktop/package.json"
+          INPUT="${{ github.event.inputs.version || '' }}"
+          if [[ -n "$INPUT" ]]; then
+            VERSION="${INPUT#v}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -p "require('./${PKG}').version")"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $VERSION" >&2
+            exit 1
+          fi
+          DRAFT="${{ github.event.inputs.draft || 'false' }}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "draft=$DRAFT" >> "$GITHUB_OUTPUT"
+          echo "Shipping $VERSION (draft=$DRAFT)"
+
   release:
     name: Build & publish (${{ matrix.platform }})
+    needs: version
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -50,53 +89,90 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Resolve version
-        id: ver
-        shell: bash
-        run: |
-          set -euo pipefail
-          INPUT="${{ github.event.inputs.version || '' }}"
-          if [[ -n "$INPUT" ]]; then
-            VERSION="${INPUT#v}"
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="$(node -p "require('./package.json').version")"
-          fi
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid version: $VERSION" >&2
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Shipping $VERSION"
-
       - name: Sync package.json version
         shell: bash
         run: |
           set -euo pipefail
           node -e "
             const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const path = 'apps/desktop/package.json';
+            const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
             pkg.version = process.env.VERSION;
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
+            fs.writeFileSync(path, JSON.stringify(pkg, null, '\t') + '\n');
           "
         env:
-          VERSION: ${{ steps.ver.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
 
       - name: Install
         run: bun install --frozen-lockfile
 
       - name: Build & publish
+        working-directory: apps/desktop
         shell: bash
         run: |
           set -euo pipefail
           bun run build
           EXTRA=()
-          if [[ "${{ github.event.inputs.draft || 'false' }}" == "true" ]]; then
+          if [[ "${{ needs.version.outputs.draft }}" == "true" ]]; then
             EXTRA+=(-c.publish.releaseType=draft)
           fi
           bunx electron-builder --publish always "${EXTRA[@]}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Unsigned mac builds are fine for personal/GitHub Releases until you add Apple certs.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+  sync-site-downloads:
+    name: PR site download images
+    needs: [version, release]
+    if: ${{ success() && needs.version.outputs.draft != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Git LFS
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      - name: Sync installers into marketing/public/downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          bun scripts/sync-site-downloads.ts --version "$VERSION" --repo "${{ github.repository }}"
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(marketing): sync download images for v${{ needs.version.outputs.version }}"
+          branch: "chore/site-downloads-v${{ needs.version.outputs.version }}"
+          delete-branch: true
+          title: "chore(marketing): site downloads for v${{ needs.version.outputs.version }}"
+          body: |
+            ## Summary
+            - Sync Linux / macOS / Windows installers into `apps/marketing/public/downloads/` (Git LFS)
+            - Refresh `manifest.json` so `/download` serves the builds for the visitor’s OS
+
+            Generated by the **Release** workflow after publishing **v${{ needs.version.outputs.version }}**.
+
+            ## Test plan
+            - [ ] PR shows LFS pointers for AppImage / DMG / EXE
+            - [ ] `/download` primary CTA matches your OS after merge + deploy
+            - [ ] Other platform links still work
+          labels: |
+            marketing
+            automated
