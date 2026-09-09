@@ -19,7 +19,37 @@
 		<div class="app" x-data="phantasmalApp" x-init="init()" :data-density="uiDensity">
 			<a class="skip-link" href="#main">Skip to content</a>
 
-			<p class="app__loading" x-show="isLoading">Starting…</p>
+			<section
+				class="boot"
+				aria-busy="true"
+				aria-live="polite"
+				aria-label="Starting Phantasmal"
+				x-show="isLoading"
+			>
+				<div class="boot__atmosphere" aria-hidden="true">
+					<span class="boot__wash boot__wash--lilac"></span>
+					<span class="boot__wash boot__wash--coral"></span>
+					<span class="boot__grid"></span>
+				</div>
+				<div class="boot__stage">
+					<div class="boot__orb" aria-hidden="true"></div>
+					<img
+						class="boot__frog"
+						src="/frog-icon.png?v=crimson"
+						alt=""
+						width="168"
+						height="168"
+						decoding="async"
+					/>
+				</div>
+				<p class="boot__brand">phantasmal</p>
+				<p class="boot__status">
+					<span class="boot__status-label">Starting</span>
+					<span class="boot__dots" aria-hidden="true">
+						<span></span><span></span><span></span>
+					</span>
+				</p>
+			</section>
 
 			<section class="welcome" aria-label="Welcome" x-show="isWelcome" x-cloak>
 				<p class="welcome__brand">phantasmal</p>

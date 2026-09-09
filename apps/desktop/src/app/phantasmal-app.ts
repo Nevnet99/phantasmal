@@ -32,6 +32,17 @@ export type SettingsTab = "ui" | "vault" | "habits" | "about" | "updates";
 
 const SETTINGS_TAB_ORDER: readonly SettingsTab[] = ["ui", "habits", "vault", "about", "updates"];
 
+/** Keep the frog splash on screen long enough to read as intentional, not a flash. */
+const BOOT_SPLASH_MIN_MS = 900;
+
+function holdBootSplash(bootStarted: number): Promise<void> {
+	const remaining = BOOT_SPLASH_MIN_MS - (performance.now() - bootStarted);
+	if (remaining <= 0) return Promise.resolve();
+	return new Promise((resolve) => {
+		window.setTimeout(resolve, remaining);
+	});
+}
+
 function dialogInertRoots(): HTMLElement[] {
 	const shell = document.querySelector<HTMLElement>(".shell");
 	return shell ? [shell] : [];
@@ -1064,6 +1075,7 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		async init() {
+			const bootStarted = performance.now();
 			this.bindSystemTheme();
 			this.todayKey = localDayKey();
 			this.todayLabel = formatDayLabel(this.todayKey);
@@ -1081,13 +1093,16 @@ export function phantasmalApp(): PhantasmalApp {
 
 			if (!api) {
 				this.status = unavailableStatus();
+				await holdBootSplash(bootStarted);
 				this.screen = "welcome";
 				return;
 			}
 
 			this.status = await api.getStatus();
-			this.screen = this.status.open ? "app" : "welcome";
+			const nextScreen = this.status.open ? "app" : "welcome";
 			this.route = "track";
+			await holdBootSplash(bootStarted);
+			this.screen = nextScreen;
 			if (this.status.open) {
 				await this.refreshHabits();
 			}
