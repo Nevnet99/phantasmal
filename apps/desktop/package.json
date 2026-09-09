@@ -4,6 +4,7 @@
 	"private": true,
 	"description": "Local-first habit workspace for tracking, creating, and breaking habits",
 	"author": "Nevnet99",
+	"license": "MIT",
 	"type": "module",
 	"main": "dist-electron/main.js",
 	"repository": {
