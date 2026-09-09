@@ -1,6 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { isUiDensity, isUiTheme, type UiDensity, type UiTheme } from "../src/shared/prefs";
+import { localDayKey } from "../src/lib/day";
+import {
+	isTrackViz,
+	isUiDensity,
+	isUiTheme,
+	type TrackViz,
+	type UiDensity,
+	type UiTheme,
+} from "../src/shared/prefs";
 import { isDayKey } from "../src/shared/habits";
 
 export type AppConfig = {
@@ -14,6 +22,15 @@ export type AppConfig = {
 	dailyReminder: boolean;
 	/** Local YYYY-MM-DD of the last due-today notification. */
 	lastReminderDay: string | null;
+	/** Preferred Track activity visualization. */
+	trackViz: TrackViz;
+	/** Show a Journal row on the Track habit graph. */
+	journalOnGraph: boolean;
+	/**
+	 * Local YYYY-MM-DD when journal-on-graph tracking started.
+	 * Days before this are not marked missed.
+	 */
+	journalOnGraphSince: string | null;
 };
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -22,6 +39,9 @@ const DEFAULT_CONFIG: AppConfig = {
 	uiTheme: "dark",
 	dailyReminder: true,
 	lastReminderDay: null,
+	trackViz: "graph",
+	journalOnGraph: false,
+	journalOnGraphSince: null,
 };
 
 export function defaultVaultPath(documentsDir: string): string {
@@ -50,6 +70,14 @@ export function readConfig(userDataDir: string): AppConfig {
 					? parsed.dailyReminder
 					: DEFAULT_CONFIG.dailyReminder,
 			lastReminderDay: isDayKey(parsed.lastReminderDay) ? parsed.lastReminderDay : null,
+			trackViz: isTrackViz(parsed.trackViz) ? parsed.trackViz : DEFAULT_CONFIG.trackViz,
+			journalOnGraph:
+				typeof parsed.journalOnGraph === "boolean"
+					? parsed.journalOnGraph
+					: DEFAULT_CONFIG.journalOnGraph,
+			journalOnGraphSince: isDayKey(parsed.journalOnGraphSince)
+				? parsed.journalOnGraphSince
+				: DEFAULT_CONFIG.journalOnGraphSince,
 		};
 	} catch {
 		return { ...DEFAULT_CONFIG };
@@ -87,6 +115,38 @@ export function setDailyReminder(userDataDir: string, dailyReminder: boolean): A
 
 export function setLastReminderDay(userDataDir: string, lastReminderDay: string | null): AppConfig {
 	const next: AppConfig = { ...readConfig(userDataDir), lastReminderDay };
+	writeConfig(userDataDir, next);
+	return next;
+}
+
+export function setTrackViz(userDataDir: string, trackViz: TrackViz): AppConfig {
+	const next: AppConfig = { ...readConfig(userDataDir), trackViz };
+	writeConfig(userDataDir, next);
+	return next;
+}
+
+export function setJournalOnGraph(userDataDir: string, journalOnGraph: boolean): AppConfig {
+	const current = readConfig(userDataDir);
+	const next: AppConfig = {
+		...current,
+		journalOnGraph,
+		journalOnGraphSince: journalOnGraph
+			? current.journalOnGraph && current.journalOnGraphSince
+				? current.journalOnGraphSince
+				: localDayKey()
+			: null,
+	};
+	writeConfig(userDataDir, next);
+	return next;
+}
+
+/** Stamp a since-day for vaults that enabled journal-on-graph before since was stored. */
+export function ensureJournalOnGraphSince(userDataDir: string): AppConfig {
+	const current = readConfig(userDataDir);
+	if (!current.journalOnGraph || current.journalOnGraphSince) {
+		return current;
+	}
+	const next: AppConfig = { ...current, journalOnGraphSince: localDayKey() };
 	writeConfig(userDataDir, next);
 	return next;
 }

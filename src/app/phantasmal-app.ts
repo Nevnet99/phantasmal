@@ -1,25 +1,35 @@
 import type {
 	CalendarCell,
-	GraphCell,
+	HabitGraphCell,
 	HabitSchedule,
 	HabitView,
 	TrackSnapshot,
 	Weekday,
 } from "@/shared/habits";
-import { WEEKDAY_LABELS } from "@/shared/habits";
+import { JOURNAL_GRAPH_ID, WEEKDAY_LABELS } from "@/shared/habits";
 import type { IdentityHabitOption, IdentityView } from "@/shared/identity";
+import {
+	JOURNAL_MOODS,
+	type JournalHabitOption,
+	type JournalHabitTag,
+	type JournalMoodId,
+	type JournalSummary,
+} from "@/shared/journal";
 import type { VaultStatus } from "@/shared/vault";
-import type { AppPrefs, UiDensity, UiTheme } from "@/shared/prefs";
-import { formatDayLabel, localDayKey, parseDayKey } from "@/lib/day";
+import type { AppPrefs, TrackViz, UiDensity, UiTheme } from "@/shared/prefs";
+import { formatDayLabel, localDayKey, parseDayKey, shiftDayKey } from "@/lib/day";
+import { isHabitColor, randomHabitColor } from "@/lib/habit-color";
+import { filterHabitTagSuggestions, habitTagSlug } from "@/lib/journal-markdown";
 import { fireTodayCompleteCelebration } from "@/lib/celebrate";
 import { trapDialogFocus, type DialogFocusSession } from "@/lib/dialog-a11y";
+import type { DsMarkdownEditor } from "@/design-system/components/markdown-editor";
 import { NAV_ITEMS, isAppRoute, navItemById, type AppRoute, type NavItem } from "./nav";
 
 export type AppScreen = "loading" | "welcome" | "setup" | "app";
 export type SettingsTab = "ui" | "vault" | "habits";
 export type ResolvedTheme = "light" | "dark";
 export type ScheduleKind = "daily" | "weekly" | "every_n_days";
-export type TrackVizMode = "graph" | "calendar";
+export type TrackVizMode = TrackViz;
 
 export type DayPopState = {
 	open: boolean;
@@ -58,6 +68,20 @@ function emptyDayPop(): DayPopState {
 const DAY_POP_MARGIN = 8;
 const DAY_POP_GAP = 8;
 const DAY_POP_MAX_WIDTH = 288;
+
+function openNativePicker(input: HTMLInputElement | undefined): void {
+	if (!(input instanceof HTMLInputElement)) return;
+	if (typeof input.showPicker === "function") {
+		try {
+			input.showPicker();
+			return;
+		} catch {
+			// Fall through to focus/click for older Chromium builds.
+		}
+	}
+	input.focus();
+	input.click();
+}
 
 function estimateDayPopSize(
 	doneCount: number,
@@ -115,28 +139,35 @@ function emptyTrack(): TrackSnapshot {
 		selectedLabel: formatDayLabel(today),
 		isSelectedToday: true,
 		summaryLabel: "No habits yet",
+		hasHabits: false,
 		remainingCount: 0,
 		doneCount: 0,
 		totalCount: 0,
 		habits: [],
 		remaining: [],
 		groups: [],
-		graph: [],
+		habitGraph: { days: [], rows: [] },
 		weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
 		calendarMonthLabel: "",
 		calendarYear: year,
 		calendarMonth: month,
 		calendarCells: [],
+		journalEntries: [],
 	};
 }
 
 type PhantasmalApp = {
+	$refs?: {
+		trackMonth?: HTMLInputElement;
+		journalDay?: HTMLInputElement;
+	};
 	screen: AppScreen;
 	route: AppRoute;
 	settingsTab: SettingsTab;
 	uiDensity: UiDensity;
 	uiTheme: UiTheme;
 	dailyReminder: boolean;
+	journalOnGraph: boolean;
 	systemPrefersDark: boolean;
 	status: VaultStatus | null;
 	busy: boolean;
@@ -165,6 +196,7 @@ type PhantasmalApp = {
 	createName: string;
 	createCue: string;
 	createNote: string;
+	createColor: string;
 	createError: string;
 	editingId: string | null;
 	stackAfterId: string;
@@ -185,6 +217,24 @@ type PhantasmalApp = {
 	identityNote: string;
 	identityHabitIds: string[];
 	identityBusy: boolean;
+	journalDay: string;
+	journalEntryId: string;
+	/** True while writing a new entry that is not saved yet. */
+	journalComposing: boolean;
+	journalMood: JournalMoodId | null;
+	journalTitle: string;
+	journalBody: string;
+	journalHabits: JournalHabitTag[];
+	journalDayEntries: JournalSummary[];
+	journalRecent: JournalSummary[];
+	journalHabitOptions: JournalHabitOption[];
+	journalMoods: typeof JOURNAL_MOODS;
+	journalError: string;
+	journalBusy: boolean;
+	journalSaving: boolean;
+	journalSaveTimer: number;
+	journalTagQuery: string;
+	journalTagOpen: boolean;
 	navItems: NavItem[];
 	get isLoading(): boolean;
 	get isWelcome(): boolean;
@@ -192,6 +242,7 @@ type PhantasmalApp = {
 	get isApp(): boolean;
 	get isTrack(): boolean;
 	get isCreate(): boolean;
+	get isJournal(): boolean;
 	get isIdentity(): boolean;
 	get isSettings(): boolean;
 	get isSettingsUi(): boolean;
@@ -209,6 +260,18 @@ type PhantasmalApp = {
 	get isIdentityEditing(): boolean;
 	get identityFormTitle(): string;
 	get identitySubmitLabel(): string;
+	get journalDayLabel(): string;
+	get journalDayValue(): string;
+	get journalIsToday(): boolean;
+	get journalStatusLabel(): string;
+	get hasJournalDayEntries(): boolean;
+	get journalDayEmpty(): boolean;
+	get journalShowEditor(): boolean;
+	get journalEmptyLabel(): string;
+	get hasJournalRecent(): boolean;
+	get hasJournalHabits(): boolean;
+	get hasJournalTagSuggestions(): boolean;
+	get journalTagSuggestions(): JournalHabitOption[];
 	get isStub(): boolean;
 	get isDensityCompact(): boolean;
 	get isDensityComfortable(): boolean;
@@ -218,11 +281,13 @@ type PhantasmalApp = {
 	get isThemeDark(): boolean;
 	get isDailyReminderOn(): boolean;
 	get isDailyReminderOff(): boolean;
+	get isJournalOnGraph(): boolean;
 	get resolvedTheme(): ResolvedTheme;
 	get hasStackOptions(): boolean;
 	get stackOptions(): { id: string; name: string }[];
 	get trackEmpty(): boolean;
 	get nothingDue(): boolean;
+	get hasTrackJournalEntries(): boolean;
 	get hasRemaining(): boolean;
 	get isEditing(): boolean;
 	get isScheduleDaily(): boolean;
@@ -230,6 +295,8 @@ type PhantasmalApp = {
 	get isScheduleEveryNDays(): boolean;
 	get isTrackGraph(): boolean;
 	get isTrackCalendar(): boolean;
+	get habitGraphStyle(): string;
+	get trackMonthValue(): string;
 	get dayPopStyle(): string;
 	get dayPopSummary(): string;
 	get dayPopHasDone(): boolean;
@@ -238,6 +305,8 @@ type PhantasmalApp = {
 	get dayPopReady(): boolean;
 	get formTitle(): string;
 	get formSubmitLabel(): string;
+	get createTagSlug(): string;
+	get createPreviewName(): string;
 	get currentLabel(): string;
 	get currentBlurb(): string;
 	get defaultPathLabel(): string;
@@ -260,20 +329,29 @@ type PhantasmalApp = {
 	setDensity(density: UiDensity): Promise<void>;
 	setTheme(theme: UiTheme): Promise<void>;
 	setDailyReminder(enabled: boolean): Promise<void>;
+	setTrackViz(mode: TrackVizMode): Promise<void>;
+	setJournalOnGraph(enabled: boolean): Promise<void>;
+	openTrackVizSettings(): void;
 	syncReminders(): void;
 	refreshHabits(): Promise<void>;
 	refreshArchivedHabits(): Promise<void>;
 	refreshTrack(): Promise<void>;
 	restoreArchivedHabit(id: string): Promise<void>;
 	selectDay(day: string): void;
+	onHabitGraphCellClick(cell: HabitGraphCell): void;
+	onHabitGraphRowLabelClick(habitId: string): void;
+	openTrackJournalEntry(entry: JournalSummary): void;
+	openTrackJournalDay(day: string): void;
 	shiftMonth(delta: number): void;
+	openTrackMonthPicker(): void;
+	onTrackMonthChange(event: Event): void;
 	goToToday(): void;
-	setTrackViz(mode: TrackVizMode): void;
-	onTrackVizChange(event: Event): void;
-	showDayPop(event: Event, cell: GraphCell | CalendarCell): void;
+	showDayPop(event: Event, cell: CalendarCell): void;
 	placeDayPop(): void;
 	hideDayPop(): void;
-	graphLevelClass(cell: GraphCell): string;
+	habitGraphCellClass(cell: HabitGraphCell): string;
+	habitGraphDayClass(day: { isToday: boolean; isSelected: boolean }): string;
+	isJournalGraphRow(row: { habitId: string }): boolean;
 	calendarCellClass(cell: CalendarCell): string;
 	habitRowClass(habit: HabitView): string;
 	habitRowWrapClass(habit: HabitView): string;
@@ -285,6 +363,10 @@ type PhantasmalApp = {
 	loadScheduleForm(schedule: HabitSchedule): void;
 	startEdit(habit: HabitView): void;
 	cancelEdit(): void;
+	setCreateColor(color: string): void;
+	applyCreateColorToPicker(): void;
+	syncCreateColorFromPicker(): void;
+	onCreateColorChange(event: Event): void;
 	saveHabitForm(): Promise<void>;
 	createHabit(): Promise<void>;
 	toggleHabit(id: string): Promise<void>;
@@ -308,6 +390,28 @@ type PhantasmalApp = {
 	isIdentityHabitLinked(id: string): boolean;
 	identityHabitOptionClass(option: IdentityHabitOption): string;
 	saveIdentityForm(): Promise<void>;
+	refreshJournal(): Promise<void>;
+	selectJournalDay(day: string): void;
+	selectJournalEntry(id: string): void;
+	selectJournalRecent(entry: JournalSummary): void;
+	startNewJournalEntry(): void;
+	isJournalEntryActive(id: string): boolean;
+	journalEntryButtonClass(entry: JournalSummary): string;
+	shiftJournalDay(delta: number): void;
+	goJournalToday(): void;
+	openJournalDayPicker(): void;
+	onJournalDayChange(event: Event): void;
+	setJournalMood(mood: JournalMoodId): void;
+	isJournalMood(mood: JournalMoodId): boolean;
+	moodButtonClass(mood: JournalMoodId): string;
+	scheduleJournalSave(): void;
+	saveJournalNow(): Promise<void>;
+	onJournalEditorChange(event: Event): void;
+	onJournalTagQuery(event: Event): void;
+	insertJournalHabitTag(option: JournalHabitOption): void;
+	syncJournalEditorHabits(): void;
+	closeJournalTagMenu(): void;
+	journalHashTag(tag: string): string;
 	chooseFolder(): Promise<void>;
 	openExisting(): Promise<void>;
 	reveal(): Promise<void>;
@@ -334,6 +438,7 @@ export function phantasmalApp(): PhantasmalApp {
 		uiDensity: "compact",
 		uiTheme: "dark",
 		dailyReminder: true,
+		journalOnGraph: false,
 		systemPrefersDark: true,
 		status: null,
 		busy: false,
@@ -362,6 +467,7 @@ export function phantasmalApp(): PhantasmalApp {
 		createName: "",
 		createCue: "",
 		createNote: "",
+		createColor: randomHabitColor(),
 		createError: "",
 		editingId: null,
 		stackAfterId: "",
@@ -382,6 +488,23 @@ export function phantasmalApp(): PhantasmalApp {
 		identityNote: "",
 		identityHabitIds: [],
 		identityBusy: false,
+		journalDay: initial.todayKey,
+		journalEntryId: "",
+		journalComposing: false,
+		journalMood: null,
+		journalTitle: "",
+		journalBody: "",
+		journalHabits: [],
+		journalDayEntries: [],
+		journalRecent: [],
+		journalHabitOptions: [],
+		journalMoods: JOURNAL_MOODS,
+		journalError: "",
+		journalBusy: false,
+		journalSaving: false,
+		journalSaveTimer: 0,
+		journalTagQuery: "",
+		journalTagOpen: false,
 		navItems: NAV_ITEMS,
 
 		get isLoading() {
@@ -406,6 +529,10 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get isCreate() {
 			return this.route === "create";
+		},
+
+		get isJournal() {
+			return this.route === "journal";
 		},
 
 		get isIdentity() {
@@ -479,6 +606,61 @@ export function phantasmalApp(): PhantasmalApp {
 			return this.identityEditingId ? "Save changes" : "Add identity";
 		},
 
+		get journalDayLabel() {
+			return formatDayLabel(this.journalDay);
+		},
+
+		get journalDayValue() {
+			return this.journalDay;
+		},
+
+		get journalIsToday() {
+			return this.journalDay === this.todayKey;
+		},
+
+		get journalStatusLabel() {
+			if (this.journalSaving) return "Saving…";
+			if (this.journalDayEmpty) return "No entries";
+			if (this.journalComposing) return "New entry";
+			if (this.journalHabits.length === 1) return `1 habit tagged`;
+			if (this.journalHabits.length > 1) return `${this.journalHabits.length} habits tagged`;
+			return "Markdown styles as you type";
+		},
+
+		get hasJournalDayEntries() {
+			return this.journalDayEntries.length > 0;
+		},
+
+		get journalDayEmpty() {
+			return !this.journalBusy && !this.hasJournalDayEntries && !this.journalComposing;
+		},
+
+		get journalShowEditor() {
+			return this.journalComposing || Boolean(this.journalEntryId);
+		},
+
+		get journalEmptyLabel() {
+			return this.journalIsToday
+				? "You have no journal entries today."
+				: `No journal entries for ${this.journalDayLabel}.`;
+		},
+
+		get hasJournalRecent() {
+			return this.journalRecent.length > 0;
+		},
+
+		get hasJournalHabits() {
+			return this.journalHabits.length > 0;
+		},
+
+		get hasJournalTagSuggestions() {
+			return this.journalTagOpen && this.journalTagSuggestions.length > 0;
+		},
+
+		get journalTagSuggestions() {
+			return filterHabitTagSuggestions(this.journalTagQuery, this.journalHabitOptions);
+		},
+
 		get isStub() {
 			const item = navItemById(this.route);
 			return Boolean(item && !item.enabled);
@@ -516,6 +698,10 @@ export function phantasmalApp(): PhantasmalApp {
 			return !this.dailyReminder;
 		},
 
+		get isJournalOnGraph() {
+			return this.journalOnGraph;
+		},
+
 		get resolvedTheme() {
 			if (this.uiTheme === "light") return "light";
 			if (this.uiTheme === "dark") return "dark";
@@ -534,11 +720,15 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		get trackEmpty() {
-			return !this.habitsBusy && this.habits.length === 0;
+			return !this.habitsBusy && !this.track.hasHabits;
 		},
 
 		get nothingDue() {
-			return !this.habitsBusy && this.habits.length > 0 && this.track.totalCount === 0;
+			return !this.habitsBusy && this.track.hasHabits && this.track.totalCount === 0;
+		},
+
+		get hasTrackJournalEntries() {
+			return this.track.journalEntries.length > 0;
 		},
 
 		get hasRemaining() {
@@ -567,6 +757,16 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get isTrackCalendar() {
 			return this.trackViz === "calendar";
+		},
+
+		get habitGraphStyle() {
+			const cols = this.track.habitGraph.days.length || 31;
+			return `--habit-graph-cols: ${cols}`;
+		},
+
+		get trackMonthValue() {
+			const month = String(this.calendarMonth).padStart(2, "0");
+			return `${this.calendarYear}-${month}`;
 		},
 
 		get dayPopStyle() {
@@ -600,6 +800,14 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get formSubmitLabel() {
 			return this.editingId ? "Save changes" : "Create habit";
+		},
+
+		get createTagSlug() {
+			return habitTagSlug(this.createName.trim() || "habit");
+		},
+
+		get createPreviewName() {
+			return this.createName.trim() || "Habit name";
 		},
 
 		get currentLabel() {
@@ -724,6 +932,13 @@ export function phantasmalApp(): PhantasmalApp {
 				this.identityError = "";
 				void this.refreshIdentities();
 			}
+			if (id === "journal") {
+				this.journalError = "";
+				this.todayKey = localDayKey();
+				this.todayLabel = formatDayLabel(this.todayKey);
+				if (!this.journalDay) this.journalDay = this.todayKey;
+				void this.refreshJournal();
+			}
 		},
 
 		backToTrack() {
@@ -747,6 +962,8 @@ export function phantasmalApp(): PhantasmalApp {
 			this.uiDensity = prefs.uiDensity;
 			this.uiTheme = prefs.uiTheme;
 			this.dailyReminder = prefs.dailyReminder;
+			this.trackViz = prefs.trackViz;
+			this.journalOnGraph = prefs.journalOnGraph;
 		},
 
 		async setDensity(density) {
@@ -771,6 +988,33 @@ export function phantasmalApp(): PhantasmalApp {
 			if (!settings) return;
 			this.applyPrefs(await settings.setDailyReminder(enabled));
 			this.syncReminders();
+		},
+
+		async setTrackViz(mode) {
+			this.trackViz = mode;
+			const settings = window.phantasmal?.settings;
+			if (!settings) return;
+			this.applyPrefs(await settings.setTrackViz(mode));
+		},
+
+		async setJournalOnGraph(enabled) {
+			this.journalOnGraph = enabled;
+			const settings = window.phantasmal?.settings;
+			if (!settings) {
+				void this.refreshTrack().catch((error) => {
+					this.habitsError = error instanceof Error ? error.message : String(error);
+				});
+				return;
+			}
+			this.applyPrefs(await settings.setJournalOnGraph(enabled));
+			void this.refreshTrack().catch((error) => {
+				this.habitsError = error instanceof Error ? error.message : String(error);
+			});
+		},
+
+		openTrackVizSettings() {
+			this.setSettingsTab("ui");
+			this.goTo("settings");
 		},
 
 		syncReminders() {
@@ -852,9 +1096,9 @@ export function phantasmalApp(): PhantasmalApp {
 				selectedDay: this.selectedDay,
 				month: this.calendarMonth,
 				year: this.calendarYear,
+				includeJournalGraph: this.journalOnGraph,
 			});
 			this.track = snap;
-			this.habits = snap.habits;
 			this.todayKey = snap.todayKey;
 			this.todayLabel = formatDayLabel(snap.todayKey);
 			this.syncReminders();
@@ -884,6 +1128,37 @@ export function phantasmalApp(): PhantasmalApp {
 			});
 		},
 
+		onHabitGraphCellClick(cell) {
+			if (!cell?.day) return;
+			if (cell.habitId === JOURNAL_GRAPH_ID) {
+				this.openTrackJournalDay(cell.day);
+				return;
+			}
+			this.selectDay(cell.day);
+		},
+
+		onHabitGraphRowLabelClick(habitId) {
+			if (habitId === JOURNAL_GRAPH_ID) {
+				this.openTrackJournalDay(this.selectedDay);
+			}
+		},
+
+		openTrackJournalEntry(entry) {
+			if (!entry?.day || !entry.id) return;
+			this.journalDay = entry.day;
+			this.journalEntryId = entry.id;
+			this.journalComposing = false;
+			this.goTo("journal");
+		},
+
+		openTrackJournalDay(day) {
+			if (!day) return;
+			this.journalDay = day;
+			this.journalEntryId = "";
+			this.journalComposing = false;
+			this.goTo("journal");
+		},
+
 		shiftMonth(delta) {
 			let month = this.calendarMonth + delta;
 			let year = this.calendarYear;
@@ -901,6 +1176,24 @@ export function phantasmalApp(): PhantasmalApp {
 			});
 		},
 
+		openTrackMonthPicker() {
+			openNativePicker(this.$refs?.trackMonth);
+		},
+
+		onTrackMonthChange(event) {
+			const value = (event.target as HTMLInputElement).value;
+			const match = /^(\d{4})-(\d{2})$/.exec(value);
+			if (!match) return;
+			const year = Number(match[1]);
+			const month = Number(match[2]);
+			if (!Number.isFinite(year) || month < 1 || month > 12) return;
+			this.calendarYear = year;
+			this.calendarMonth = month;
+			void this.refreshTrack().catch((error) => {
+				this.habitsError = error instanceof Error ? error.message : String(error);
+			});
+		},
+
 		goToToday() {
 			this.selectedDay = localDayKey();
 			const parts = parseDayKey(this.selectedDay);
@@ -911,19 +1204,8 @@ export function phantasmalApp(): PhantasmalApp {
 			});
 		},
 
-		setTrackViz(mode) {
-			this.trackViz = mode;
-		},
-
-		onTrackVizChange(event) {
-			const detail = (event as CustomEvent<{ value: TrackVizMode }>).detail;
-			if (detail?.value === "graph" || detail?.value === "calendar") {
-				this.setTrackViz(detail.value);
-			}
-		},
-
 		showDayPop(event, cell) {
-			if ("empty" in cell && cell.empty) return;
+			if (cell.empty) return;
 			if (!cell.day) return;
 			const target = event.currentTarget;
 			if (!(target instanceof HTMLElement)) return;
@@ -994,8 +1276,19 @@ export function phantasmalApp(): PhantasmalApp {
 			this.dayPop = emptyDayPop();
 		},
 
-		graphLevelClass(cell) {
-			return `graph__cell graph__cell--l${cell.level}`;
+		habitGraphCellClass(cell) {
+			return `habit-graph__cell habit-graph__cell--${cell.state}`;
+		},
+
+		habitGraphDayClass(day) {
+			const parts = ["habit-graph__day"];
+			if (day.isToday) parts.push("habit-graph__day--today");
+			if (day.isSelected) parts.push("habit-graph__day--selected");
+			return parts.join(" ");
+		},
+
+		isJournalGraphRow(row) {
+			return row.habitId === JOURNAL_GRAPH_ID;
 		},
 
 		calendarCellClass(cell) {
@@ -1101,10 +1394,12 @@ export function phantasmalApp(): PhantasmalApp {
 			this.createName = habit.name;
 			this.createCue = habit.cue;
 			this.createNote = habit.note;
+			this.createColor = habit.color;
 			this.stackAfterId = habit.stackAfterId ?? "";
 			this.createError = "";
 			this.loadScheduleForm(habit.schedule);
 			this.route = "create";
+			this.applyCreateColorToPicker();
 		},
 
 		cancelEdit() {
@@ -1112,12 +1407,42 @@ export function phantasmalApp(): PhantasmalApp {
 			this.createName = "";
 			this.createCue = "";
 			this.createNote = "";
+			this.createColor = randomHabitColor();
 			this.stackAfterId = "";
 			this.createError = "";
 			this.resetScheduleForm();
+			this.applyCreateColorToPicker();
+		},
+
+		setCreateColor(color) {
+			if (!isHabitColor(color)) return;
+			this.createColor = color.toLowerCase();
+		},
+
+		applyCreateColorToPicker() {
+			requestAnimationFrame(() => {
+				const picker = document.querySelector("ds-color-picker");
+				if (!picker || !("value" in picker)) return;
+				(picker as HTMLElement & { value: string }).value = this.createColor;
+			});
+		},
+
+		syncCreateColorFromPicker() {
+			const picker = document.querySelector("ds-color-picker");
+			if (!picker || !("value" in picker)) return;
+			this.setCreateColor((picker as HTMLElement & { value: string }).value);
+		},
+
+		onCreateColorChange(event) {
+			const detail = (event as CustomEvent<{ value: string }>).detail;
+			const target = event.target as HTMLElement & { value?: string };
+			const next = detail?.value || target?.value;
+			if (!next) return;
+			this.setCreateColor(next);
 		},
 
 		async saveHabitForm() {
+			this.syncCreateColorFromPicker();
 			if (this.editingId) {
 				const api = window.phantasmal?.habits;
 				if (!api) {
@@ -1138,6 +1463,7 @@ export function phantasmalApp(): PhantasmalApp {
 							name,
 							cue: this.createCue.trim(),
 							note: this.createNote.trim(),
+							color: this.createColor,
 							schedule: this.buildSchedule(),
 							stackAfterId: this.stackAfterId || null,
 						},
@@ -1157,6 +1483,7 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		async createHabit() {
+			this.syncCreateColorFromPicker();
 			const api = window.phantasmal?.habits;
 			if (!api) {
 				this.createError = "Habits API is only available in the Electron app.";
@@ -1176,6 +1503,7 @@ export function phantasmalApp(): PhantasmalApp {
 						name,
 						cue: this.createCue.trim(),
 						note: this.createNote.trim(),
+						color: this.createColor,
 						schedule: this.buildSchedule(),
 						stackAfterId: this.stackAfterId || null,
 					},
@@ -1184,9 +1512,11 @@ export function phantasmalApp(): PhantasmalApp {
 				this.createName = "";
 				this.createCue = "";
 				this.createNote = "";
+				this.createColor = randomHabitColor();
 				this.stackAfterId = "";
 				this.editingId = null;
 				this.resetScheduleForm();
+				this.applyCreateColorToPicker();
 				await this.refreshHabits();
 				this.route = "track";
 			} catch (error) {
@@ -1448,6 +1778,247 @@ export function phantasmalApp(): PhantasmalApp {
 				this.identityError = error instanceof Error ? error.message : String(error);
 				this.identityBusy = false;
 			}
+		},
+
+		async refreshJournal() {
+			const api = window.phantasmal?.journal;
+			if (!api) {
+				this.journalError = "Journal API is only available in the Electron app.";
+				return;
+			}
+			this.journalBusy = true;
+			this.journalError = "";
+			try {
+				const snap = await api.get({
+					day: this.journalDay,
+					entryId: this.journalComposing ? null : this.journalEntryId || null,
+				});
+				this.journalDayEntries = snap.dayEntries;
+				this.journalRecent = snap.recent;
+				this.journalHabitOptions = snap.habitOptions;
+				this.syncJournalEditorHabits();
+				this.closeJournalTagMenu();
+
+				if (this.journalComposing) {
+					return;
+				}
+
+				if (snap.dayEntries.length === 0) {
+					this.journalEntryId = "";
+					this.journalMood = null;
+					this.journalTitle = "";
+					this.journalBody = "";
+					this.journalHabits = [];
+					const editor = document.getElementById("journal-md") as DsMarkdownEditor | null;
+					if (editor) editor.value = "";
+					return;
+				}
+
+				this.journalEntryId = snap.entry.id;
+				this.journalMood = snap.entry.mood;
+				this.journalTitle = snap.entry.title;
+				this.journalBody = snap.entry.body;
+				this.journalHabits = snap.entry.habits;
+			} catch (error) {
+				this.journalError = error instanceof Error ? error.message : String(error);
+			} finally {
+				this.journalBusy = false;
+			}
+		},
+
+		selectJournalDay(day) {
+			if (!day) return;
+			void this.saveJournalNow().finally(() => {
+				this.journalDay = day;
+				this.journalEntryId = "";
+				this.journalComposing = false;
+				void this.refreshJournal();
+			});
+		},
+
+		selectJournalEntry(id) {
+			if (!id || (id === this.journalEntryId && !this.journalComposing)) return;
+			void this.saveJournalNow().finally(() => {
+				this.journalEntryId = id;
+				this.journalComposing = false;
+				void this.refreshJournal();
+			});
+		},
+
+		selectJournalRecent(entry) {
+			if (!entry?.day) return;
+			void this.saveJournalNow().finally(() => {
+				this.journalDay = entry.day;
+				this.journalEntryId = entry.id;
+				this.journalComposing = false;
+				void this.refreshJournal();
+			});
+		},
+
+		startNewJournalEntry() {
+			void this.saveJournalNow().finally(() => {
+				this.journalComposing = true;
+				this.journalEntryId = "";
+				this.journalMood = null;
+				this.journalTitle = "";
+				this.journalBody = "";
+				this.journalHabits = [];
+				this.closeJournalTagMenu();
+				const editor = document.getElementById("journal-md") as DsMarkdownEditor | null;
+				if (editor) editor.value = "";
+				void this.refreshJournal();
+			});
+		},
+
+		isJournalEntryActive(id) {
+			return !this.journalComposing && Boolean(id) && id === this.journalEntryId;
+		},
+
+		journalEntryButtonClass(entry) {
+			const parts = ["journal-day-entries__item"];
+			if (this.isJournalEntryActive(entry.id)) parts.push("journal-day-entries__item--active");
+			return parts.join(" ");
+		},
+
+		shiftJournalDay(delta) {
+			this.selectJournalDay(shiftDayKey(this.journalDay, delta));
+		},
+
+		goJournalToday() {
+			this.selectJournalDay(localDayKey());
+		},
+
+		openJournalDayPicker() {
+			openNativePicker(this.$refs?.journalDay);
+		},
+
+		onJournalDayChange(event) {
+			const value = (event.target as HTMLInputElement).value;
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+			this.selectJournalDay(value);
+		},
+
+		setJournalMood(mood) {
+			this.journalMood = this.journalMood === mood ? null : mood;
+			this.scheduleJournalSave();
+		},
+
+		isJournalMood(mood) {
+			return this.journalMood === mood;
+		},
+
+		moodButtonClass(mood) {
+			const parts = ["journal-mood"];
+			if (this.isJournalMood(mood)) parts.push("journal-mood--on");
+			parts.push(`journal-mood--${mood}`);
+			return parts.join(" ");
+		},
+
+		scheduleJournalSave() {
+			if (this.journalSaveTimer) {
+				window.clearTimeout(this.journalSaveTimer);
+			}
+			this.journalSaveTimer = window.setTimeout(() => {
+				this.journalSaveTimer = 0;
+				void this.saveJournalNow();
+			}, 450);
+		},
+
+		async saveJournalNow() {
+			const api = window.phantasmal?.journal;
+			if (!api) return;
+			if (this.journalSaveTimer) {
+				window.clearTimeout(this.journalSaveTimer);
+				this.journalSaveTimer = 0;
+			}
+
+			const composingNew = this.journalComposing && !this.journalEntryId;
+			const blank = !this.journalTitle.trim() && !this.journalBody.trim() && !this.journalMood;
+			if (composingNew && blank) {
+				return;
+			}
+			if (!this.journalShowEditor && blank) {
+				return;
+			}
+
+			this.journalSaving = true;
+			this.journalError = "";
+			try {
+				const saved = await api.save({
+					day: this.journalDay,
+					id: this.journalEntryId || null,
+					mood: this.journalMood,
+					title: this.journalTitle,
+					body: this.journalBody,
+				});
+
+				if (saved.isEmpty) {
+					this.journalEntryId = "";
+					this.journalComposing = false;
+					this.journalHabits = [];
+				} else {
+					this.journalEntryId = saved.id;
+					this.journalComposing = false;
+					this.journalHabits = saved.habits;
+				}
+
+				const snap = await api.get({
+					day: this.journalDay,
+					entryId: this.journalEntryId || null,
+				});
+				this.journalDayEntries = snap.dayEntries;
+				this.journalRecent = snap.recent;
+
+				if (this.journalOnGraph || this.route === "track") {
+					void this.refreshTrack().catch(() => {
+						/* Track refresh is best-effort after journal save. */
+					});
+				}
+			} catch (error) {
+				this.journalError = error instanceof Error ? error.message : String(error);
+			} finally {
+				this.journalSaving = false;
+			}
+		},
+
+		onJournalEditorChange(event) {
+			const detail = (event as CustomEvent<{ value: string }>).detail;
+			if (!detail || typeof detail.value !== "string") return;
+			this.journalBody = detail.value;
+			this.scheduleJournalSave();
+		},
+
+		onJournalTagQuery(event) {
+			const detail = (event as CustomEvent<{ open: boolean; query: string }>).detail;
+			if (!detail) return;
+			if (detail.open) {
+				this.journalTagQuery = detail.query;
+				this.journalTagOpen = true;
+			} else {
+				this.closeJournalTagMenu();
+			}
+		},
+
+		insertJournalHabitTag(option) {
+			this.syncJournalEditorHabits();
+			const editor = document.getElementById("journal-md") as DsMarkdownEditor | null;
+			editor?.insertHashtag(option.tag);
+			this.closeJournalTagMenu();
+		},
+
+		syncJournalEditorHabits() {
+			const editor = document.getElementById("journal-md") as DsMarkdownEditor | null;
+			if (!editor) return;
+			editor.habits = this.journalHabitOptions;
+		},
+
+		closeJournalTagMenu() {
+			this.journalTagOpen = false;
+			this.journalTagQuery = "";
+		},
+
+		journalHashTag(tag) {
+			return `#${tag}`;
 		},
 
 		celebrateTodayComplete() {

@@ -8,6 +8,7 @@ function habit(partial: Partial<HabitRecord> = {}): HabitRecord {
 		name: "A",
 		cue: "",
 		note: "",
+		color: "#5b8c5a",
 		schedule: { type: "daily" },
 		stackAfterId: null,
 		stackOrder: 0,

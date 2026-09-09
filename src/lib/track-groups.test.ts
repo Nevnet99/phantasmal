@@ -6,6 +6,7 @@ function view(partial: Pick<HabitView, "id" | "name"> & Partial<HabitView>): Hab
 	return {
 		cue: "",
 		note: "",
+		color: "#5b8c5a",
 		schedule: { type: "daily" },
 		scheduleLabel: "Every day",
 		stackAfterId: null,

@@ -1,5 +1,7 @@
 /** Shared habit types and IPC channel names (renderer + preload + main). */
 
+import type { JournalSummary } from "./journal";
+
 export const HABIT_CHANNELS = {
 	list: "habits:list",
 	listArchived: "habits:listArchived",
@@ -48,6 +50,8 @@ export type HabitRecord = {
 	cue: string;
 	/** Optional note (identity, stacking, 2-minute version, etc.). */
 	note: string;
+	/** Accent for graph cells and journal tags (#RRGGBB). */
+	color: string;
 	schedule: HabitSchedule;
 	/** Stack after this habit id (“After X, I will Y”). */
 	stackAfterId: string | null;
@@ -67,6 +71,7 @@ export type HabitDraft = {
 	name: string;
 	cue?: string;
 	note?: string;
+	color?: string;
 	schedule?: HabitSchedule;
 	stackAfterId?: string | null;
 };
@@ -77,6 +82,7 @@ export type HabitView = {
 	name: string;
 	cue: string;
 	note: string;
+	color: string;
 	schedule: HabitSchedule;
 	scheduleLabel: string;
 	stackAfterId: string | null;
@@ -105,14 +111,41 @@ export type TrackGroup = {
 	votesOpenLabel: string;
 };
 
-export type GraphCell = {
+export type HabitGraphDay = {
 	day: DayKey;
-	level: ActivityLevel;
+	/** Short weekday letter, e.g. M */
+	weekday: string;
+	/** Day of month, e.g. 9 */
+	dayNum: string;
+	isToday: boolean;
+	isSelected: boolean;
 	label: string;
-	completed: number;
-	total: number;
-	doneNames: string[];
-	missedNames: string[];
+};
+
+export type HabitGraphCellState = "done" | "missed" | "off";
+
+export type HabitGraphCell = {
+	key: string;
+	habitId: string;
+	day: DayKey;
+	state: HabitGraphCellState;
+	done: boolean;
+	label: string;
+};
+
+export type HabitGraphRow = {
+	habitId: string;
+	name: string;
+	color: string;
+	streak: number;
+	streakLabel: string;
+	cells: HabitGraphCell[];
+};
+
+/** Habit × day completion matrix (days across the top, habits down the side). */
+export type HabitGraph = {
+	days: HabitGraphDay[];
+	rows: HabitGraphRow[];
 };
 
 export type CalendarCell = {
@@ -136,7 +169,20 @@ export type TrackQuery = {
 	/** 1–12 */
 	month: number;
 	year: number;
+	/** Include a synthetic Journal row on the habit graph. */
+	includeJournalGraph?: boolean;
+	/**
+	 * Local YYYY-MM-DD when journal graph tracking started.
+	 * Days before this are off (not missed) unless already journaled.
+	 */
+	journalGraphSince?: DayKey | null;
 };
+
+/** Synthetic graph row id for journaling (not a real habit file). */
+export const JOURNAL_GRAPH_ID = "__journal__";
+
+export const JOURNAL_GRAPH_COLOR = "#4f7cac";
+export const JOURNAL_GRAPH_NAME = "Journal";
 
 export type TrackSnapshot = {
 	todayKey: DayKey;
@@ -144,6 +190,8 @@ export type TrackSnapshot = {
 	selectedLabel: string;
 	isSelectedToday: boolean;
 	summaryLabel: string;
+	/** True when the vault has at least one habit (active or archived). */
+	hasHabits: boolean;
 	remainingCount: number;
 	doneCount: number;
 	totalCount: number;
@@ -151,12 +199,14 @@ export type TrackSnapshot = {
 	remaining: HabitView[];
 	/** Habits grouped by linked identity (stack families stay together). */
 	groups: TrackGroup[];
-	graph: GraphCell[];
+	habitGraph: HabitGraph;
 	weekdays: string[];
 	calendarMonthLabel: string;
 	calendarYear: number;
 	calendarMonth: number;
 	calendarCells: CalendarCell[];
+	/** Journal entries for the selected day (created order). */
+	journalEntries: JournalSummary[];
 };
 
 export type HabitsApi = {
@@ -179,12 +229,25 @@ export function isDayKey(value: unknown): value is DayKey {
 export function isTrackQuery(value: unknown): value is TrackQuery {
 	if (!value || typeof value !== "object") return false;
 	const record = value as Record<string, unknown>;
-	return (
+	if (!(
 		isDayKey(record.selectedDay) &&
 		typeof record.month === "number" &&
 		record.month >= 1 &&
 		record.month <= 12 &&
 		typeof record.year === "number" &&
 		Number.isInteger(record.year)
-	);
+	)) {
+		return false;
+	}
+	if (record.includeJournalGraph !== undefined && typeof record.includeJournalGraph !== "boolean") {
+		return false;
+	}
+	if (
+		record.journalGraphSince !== undefined &&
+		record.journalGraphSince !== null &&
+		!isDayKey(record.journalGraphSince)
+	) {
+		return false;
+	}
+	return true;
 }

@@ -16,11 +16,20 @@ import {
 	type IdentityView,
 } from "../src/shared/identity";
 import {
+	JOURNAL_CHANNELS,
+	type JournalApi,
+	type JournalDraft,
+	type JournalEntryView,
+	type JournalSnapshot,
+	type JournalSummary,
+} from "../src/shared/journal";
+import {
 	REMINDER_CHANNELS,
 	SETTINGS_CHANNELS,
 	type AppPrefs,
 	type RemindersApi,
 	type SettingsApi,
+	type TrackViz,
 	type UiDensity,
 	type UiTheme,
 } from "../src/shared/prefs";
@@ -44,6 +53,10 @@ const settings: SettingsApi = {
 		ipcRenderer.invoke(SETTINGS_CHANNELS.setUiTheme, theme) as Promise<AppPrefs>,
 	setDailyReminder: (enabled: boolean) =>
 		ipcRenderer.invoke(SETTINGS_CHANNELS.setDailyReminder, enabled) as Promise<AppPrefs>,
+	setTrackViz: (mode: TrackViz) =>
+		ipcRenderer.invoke(SETTINGS_CHANNELS.setTrackViz, mode) as Promise<AppPrefs>,
+	setJournalOnGraph: (enabled: boolean) =>
+		ipcRenderer.invoke(SETTINGS_CHANNELS.setJournalOnGraph, enabled) as Promise<AppPrefs>,
 };
 
 const habits: HabitsApi = {
@@ -80,6 +93,14 @@ const identity: IdentityApi = {
 	remove: (id: string) => ipcRenderer.invoke(IDENTITY_CHANNELS.remove, id) as Promise<void>,
 };
 
+const journal: JournalApi = {
+	get: (query) => ipcRenderer.invoke(JOURNAL_CHANNELS.get, query) as Promise<JournalSnapshot>,
+	list: () => ipcRenderer.invoke(JOURNAL_CHANNELS.list) as Promise<JournalSummary[]>,
+	save: (draft: JournalDraft) =>
+		ipcRenderer.invoke(JOURNAL_CHANNELS.save, draft) as Promise<JournalEntryView>,
+	remove: (id: string) => ipcRenderer.invoke(JOURNAL_CHANNELS.remove, id) as Promise<void>,
+};
+
 const reminders: RemindersApi = {
 	syncDueToday: (remaining: number, today: string) =>
 		ipcRenderer.invoke(REMINDER_CHANNELS.syncDueToday, remaining, today) as Promise<void>,
@@ -91,5 +112,6 @@ contextBridge.exposeInMainWorld("phantasmal", {
 	settings,
 	habits,
 	identity,
+	journal,
 	reminders,
 });
