@@ -1,36 +1,38 @@
 {
-	"version": null,
-	"tag": null,
-	"updatedAt": null,
-	"note": "Filled by the Release workflow after each ship. Until then, download falls back to GitHub Releases.",
+	"version": "1.0.0",
+	"tag": "v1.0.0",
+	"updatedAt": "2026-09-09T20:54:28.346Z",
 	"platforms": {
 		"linux": {
 			"id": "linux",
 			"label": "Linux",
 			"hint": "AppImage",
 			"file": "phantasmal-linux.AppImage",
-			"url": null,
-			"githubUrl": null
+			"url": "/downloads/phantasmal-linux.AppImage",
+			"githubUrl": "https://github.com/Nevnet99/phantasmal/releases/download/v1.0.0/Phantasmal-1.0.0.AppImage",
+			"size": 130003200
 		},
 		"mac": {
 			"id": "mac",
 			"label": "macOS",
 			"hint": "DMG",
 			"file": "phantasmal-mac.dmg",
-			"url": null,
-			"githubUrl": null
+			"url": "/downloads/phantasmal-mac.dmg",
+			"githubUrl": "https://github.com/Nevnet99/phantasmal/releases/download/v1.0.0/Phantasmal-1.0.0-arm64.dmg",
+			"size": 123205305
 		},
 		"windows": {
 			"id": "windows",
 			"label": "Windows",
 			"hint": "Installer",
 			"file": "phantasmal-windows.exe",
-			"url": null,
-			"githubUrl": null
+			"url": "/downloads/phantasmal-windows.exe",
+			"githubUrl": "https://github.com/Nevnet99/phantasmal/releases/download/v1.0.0/Phantasmal-Setup-1.0.0.exe",
+			"size": 98469640
 		}
 	},
 	"fallback": {
-		"url": "https://github.com/Nevnet99/phantasmal/releases/latest",
-		"label": "All releases on GitHub"
+		"url": "https://github.com/Nevnet99/phantasmal/releases/tag/v1.0.0",
+		"label": "Release v1.0.0 on GitHub"
 	}
 }
