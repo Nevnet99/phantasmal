@@ -33,11 +33,17 @@ function createWindow() {
 		minHeight: 600,
 		title: "Phantasmal",
 		icon: resolveAppIcon(),
+		show: false,
+		backgroundColor: "#363938",
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			contextIsolation: true,
 			nodeIntegration: false,
 		},
+	});
+
+	win.once("ready-to-show", () => {
+		win.show();
 	});
 
 	if (process.env.VITE_DEV_SERVER_URL) {
