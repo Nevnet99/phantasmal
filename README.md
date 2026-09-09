@@ -4,7 +4,34 @@ Local-first Atomic Habits workspace (Electron). Track habits, design systems for
 
 **UI:** Lit for the design system only; Alpine.js for app screens (minimal JS).
 
-## Requirements
+## Download
+
+Grab the latest build from
+[GitHub Releases](https://github.com/Nevnet99/phantasmal/releases/latest).
+
+| Platform | File to download |
+| --- | --- |
+| Linux | `.AppImage` |
+| macOS | `.dmg` (or `.zip`) |
+| Windows | `.exe` installer (NSIS) |
+
+**Linux:** make the AppImage executable, then run it:
+
+```bash
+chmod +x Phantasmal-*.AppImage
+./Phantasmal-*.AppImage
+```
+
+**macOS:** open the `.dmg`, drag Phantasmal into Applications, then launch it.
+Builds are currently unsigned — if Gatekeeper blocks it, right-click the app → **Open**,
+or allow it under **System Settings → Privacy & Security**.
+
+**Windows:** run the `.exe` installer and follow the prompts.
+
+After install, open **Settings → Updates** to check for newer releases. Auto-update only
+works in these packaged apps, not when running from source with `bun run dev`.
+
+## Requirements (from source)
 
 - Node `>=22.12.0`
 - [Bun](https://bun.sh)
@@ -39,7 +66,7 @@ In the app you can:
 
 Each machine stores only a pointer to that folder in its local app config. Edit from either machine; sync conflicts stay scoped to individual files, like Obsidian.
 
-## Setup
+## Setup (from source)
 
 ```bash
 bun install

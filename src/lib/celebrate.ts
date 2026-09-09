@@ -7,10 +7,10 @@ function readColor(name: string, fallback: string): string {
 
 function celebrationColors(): string[] {
 	return [
-		readColor("--color-accent", "#8fbc8f"),
-		readColor("--color-ink", "#e8efe6"),
-		readColor("--color-muted", "#9aab9e"),
-		readColor("--color-danger", "#e8a090"),
+		readColor("--color-accent", "#e4c3e0"),
+		readColor("--color-ink", "#c2cdc8"),
+		readColor("--color-muted", "#adbcb5"),
+		readColor("--color-danger", "#d95a3b"),
 	];
 }
 

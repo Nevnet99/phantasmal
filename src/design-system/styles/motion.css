@@ -1,0 +1,252 @@
+/* Motion system — opt-in via prefers-reduced-motion: no-preference */
+
+:root {
+	--motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
+	--motion-duration-fast: 150ms;
+	--motion-duration: 200ms;
+	--motion-duration-enter: 320ms;
+	--motion-duration-exit: 180ms;
+	--motion-press-scale: 0.96;
+}
+
+@keyframes motion-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes motion-rise {
+	from {
+		opacity: 0;
+		transform: translateY(0.45rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes motion-rise-soft {
+	from {
+		opacity: 0;
+		transform: translateY(0.25rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes motion-scale-in {
+	from {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes motion-backdrop-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* First-paint chrome */
+	.welcome,
+	.setup {
+		animation: motion-rise var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+
+	.sidebar__brand {
+		animation: motion-rise-soft var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+
+	.sidebar__nav .sidebar__link {
+		animation: motion-rise-soft var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+
+	.sidebar__nav .sidebar__link:nth-child(1) {
+		animation-delay: 40ms;
+	}
+	.sidebar__nav .sidebar__link:nth-child(2) {
+		animation-delay: 70ms;
+	}
+	.sidebar__nav .sidebar__link:nth-child(3) {
+		animation-delay: 100ms;
+	}
+	.sidebar__nav .sidebar__link:nth-child(4) {
+		animation-delay: 130ms;
+	}
+	.sidebar__nav .sidebar__link:nth-child(5) {
+		animation-delay: 160ms;
+	}
+
+	.sidebar__footer {
+		animation: motion-rise-soft var(--motion-duration-enter) var(--motion-ease-out) 180ms both;
+	}
+
+	/* Route / section panels */
+	.panel {
+		animation: motion-rise var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+
+	.settings-panel {
+		animation: motion-rise-soft var(--motion-duration) var(--motion-ease-out) both;
+	}
+
+	/* Lists — light stagger */
+	.habit-list__row,
+	.identity-card,
+	.break-card,
+	.archive-list__item,
+	.about-list__item,
+	.journal-recent__item {
+		animation: motion-rise-soft var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+
+	.habit-list__row:nth-child(1),
+	.identity-card:nth-child(1),
+	.break-card:nth-child(1),
+	.archive-list__item:nth-child(1),
+	.about-list__item:nth-child(1),
+	.journal-recent__item:nth-child(1) {
+		animation-delay: 30ms;
+	}
+	.habit-list__row:nth-child(2),
+	.identity-card:nth-child(2),
+	.break-card:nth-child(2),
+	.archive-list__item:nth-child(2),
+	.about-list__item:nth-child(2),
+	.journal-recent__item:nth-child(2) {
+		animation-delay: 55ms;
+	}
+	.habit-list__row:nth-child(3),
+	.identity-card:nth-child(3),
+	.break-card:nth-child(3),
+	.archive-list__item:nth-child(3),
+	.about-list__item:nth-child(3),
+	.journal-recent__item:nth-child(3) {
+		animation-delay: 80ms;
+	}
+	.habit-list__row:nth-child(4),
+	.identity-card:nth-child(4),
+	.break-card:nth-child(4),
+	.archive-list__item:nth-child(4),
+	.about-list__item:nth-child(4),
+	.journal-recent__item:nth-child(4) {
+		animation-delay: 105ms;
+	}
+	.habit-list__row:nth-child(5),
+	.identity-card:nth-child(5),
+	.break-card:nth-child(5),
+	.archive-list__item:nth-child(5),
+	.about-list__item:nth-child(5),
+	.journal-recent__item:nth-child(5) {
+		animation-delay: 130ms;
+	}
+	.habit-list__row:nth-child(6),
+	.identity-card:nth-child(6),
+	.break-card:nth-child(6),
+	.archive-list__item:nth-child(6),
+	.about-list__item:nth-child(6),
+	.journal-recent__item:nth-child(6) {
+		animation-delay: 155ms;
+	}
+	.habit-list__row:nth-child(n + 7),
+	.identity-card:nth-child(n + 7),
+	.break-card:nth-child(n + 7),
+	.archive-list__item:nth-child(n + 7),
+	.about-list__item:nth-child(n + 7),
+	.journal-recent__item:nth-child(n + 7) {
+		animation-delay: 170ms;
+	}
+
+	/* Dialog */
+	.dialog__backdrop {
+		animation: motion-backdrop-in var(--motion-duration) var(--motion-ease-out) both;
+	}
+
+	.dialog__panel {
+		animation: motion-scale-in var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+
+	/* Interactive transitions */
+	.ds-btn,
+	.back-btn,
+	.sidebar__link,
+	.settings-tabs__tab,
+	.pref-option,
+	.text-link,
+	.habit-list__edit,
+	.habit-list__remove,
+	.journal-mood,
+	.cal__day,
+	.habit-graph__cell,
+	.habit-graph__day,
+	.about-list__link,
+	.journal-recent__item,
+	.journal-tag-menu__item {
+		transition-property:
+			background-color, border-color, color, opacity, box-shadow, scale, transform;
+		transition-duration: var(--motion-duration-fast);
+		transition-timing-function: var(--motion-ease-out);
+	}
+
+	.ds-btn:active:not(:disabled),
+	.back-btn:active,
+	.pref-option:active,
+	.settings-tabs__tab:active,
+	.sidebar__link:active,
+	.habit-list__edit:active,
+	.habit-list__remove:active,
+	.about-list__link:active,
+	.journal-mood:active,
+	.cal__day:active:not(:disabled),
+	.habit-graph__cell:active,
+	.habit-graph__day:active,
+	.journal-recent__item:active,
+	.journal-tag-menu__item:active {
+		scale: var(--motion-press-scale);
+	}
+
+	.day-pop {
+		transition:
+			opacity var(--motion-duration-fast) var(--motion-ease-out),
+			transform var(--motion-duration-fast) var(--motion-ease-out);
+		transform: translateY(0.2rem);
+	}
+
+	.day-pop--ready {
+		transform: translateY(0);
+	}
+
+	.habit-graph__cell--done,
+	.habit-graph__cell--missed,
+	.habit-graph__cell--off {
+		transition-property: background-color, border-color, opacity, scale;
+		transition-duration: var(--motion-duration-fast);
+		transition-timing-function: var(--motion-ease-out);
+	}
+
+	.celebrate {
+		animation: celebrate-in var(--motion-duration-enter) var(--motion-ease-out) both;
+	}
+}
+
+/* Theme flips must snap — avoid every color transition firing at once */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+	transition: none !important;
+	animation: none !important;
+}

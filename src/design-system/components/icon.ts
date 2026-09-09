@@ -48,7 +48,7 @@ export class DsIcon extends LitElement {
 
 		.icon {
 			font-family: "Material Symbols Outlined Variable", "Material Symbols Outlined";
-			font-weight: normal;
+			font-weight: 400;
 			font-style: normal;
 			font-size: var(--ds-icon-size, 1.35rem);
 			line-height: 1;
@@ -65,27 +65,26 @@ export class DsIcon extends LitElement {
 			-webkit-font-smoothing: antialiased;
 			-webkit-font-feature-settings: "liga";
 			font-feature-settings: "liga";
-			font-variation-settings: "wght" 400;
 			user-select: none;
 		}
 
 		:host([weight="100"]) .icon {
-			font-variation-settings: "wght" 100;
+			font-weight: 100;
 		}
 		:host([weight="200"]) .icon {
-			font-variation-settings: "wght" 200;
+			font-weight: 200;
 		}
 		:host([weight="300"]) .icon {
-			font-variation-settings: "wght" 300;
+			font-weight: 300;
 		}
 		:host([weight="500"]) .icon {
-			font-variation-settings: "wght" 500;
+			font-weight: 500;
 		}
 		:host([weight="600"]) .icon {
-			font-variation-settings: "wght" 600;
+			font-weight: 600;
 		}
 		:host([weight="700"]) .icon {
-			font-variation-settings: "wght" 700;
+			font-weight: 700;
 		}
 	`;
 

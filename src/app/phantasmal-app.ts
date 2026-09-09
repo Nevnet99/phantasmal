@@ -29,6 +29,13 @@ import { NAV_ITEMS, isAppRoute, navItemById, type AppRoute, type NavItem } from 
 
 export type AppScreen = "loading" | "welcome" | "setup" | "app";
 export type SettingsTab = "ui" | "vault" | "habits" | "about" | "updates";
+
+const SETTINGS_TAB_ORDER: readonly SettingsTab[] = ["ui", "habits", "vault", "about", "updates"];
+
+function dialogInertRoots(): HTMLElement[] {
+	const shell = document.querySelector<HTMLElement>(".shell");
+	return shell ? [shell] : [];
+}
 export type ResolvedTheme = "light" | "dark";
 export type ScheduleKind = "daily" | "weekly" | "every_n_days";
 export type TrackVizMode = TrackViz;
@@ -365,6 +372,7 @@ type PhantasmalApp = {
 	goTo(id: AppRoute): void;
 	backToTrack(): void;
 	isActive(id: AppRoute): boolean;
+	onSettingsTabKeydown(event: KeyboardEvent): void;
 	setSettingsTab(tab: SettingsTab): void;
 	refreshAbout(): Promise<void>;
 	refreshAppUpdate(): Promise<void>;
@@ -1045,7 +1053,14 @@ export function phantasmalApp(): PhantasmalApp {
 		},
 
 		applyTheme() {
-			document.documentElement.dataset.theme = this.resolvedTheme;
+			const root = document.documentElement;
+			root.classList.add("theme-switching");
+			root.dataset.theme = this.resolvedTheme;
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					root.classList.remove("theme-switching");
+				});
+			});
 		},
 
 		async init() {
@@ -1161,6 +1176,28 @@ export function phantasmalApp(): PhantasmalApp {
 			if (tab === "updates") {
 				void this.refreshAppUpdate();
 			}
+		},
+
+		onSettingsTabKeydown(event) {
+			const key = event.key;
+			if (key !== "ArrowLeft" && key !== "ArrowRight" && key !== "Home" && key !== "End") {
+				return;
+			}
+			event.preventDefault();
+			const tabs = SETTINGS_TAB_ORDER;
+			const index = tabs.indexOf(this.settingsTab);
+			if (index < 0) return;
+			let next = index;
+			if (key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+			if (key === "ArrowRight") next = (index + 1) % tabs.length;
+			if (key === "Home") next = 0;
+			if (key === "End") next = tabs.length - 1;
+			const tab = tabs[next];
+			if (!tab) return;
+			this.setSettingsTab(tab);
+			requestAnimationFrame(() => {
+				document.getElementById(`settings-tab-${tab}`)?.focus();
+			});
 		},
 
 		async refreshAbout() {
@@ -1874,7 +1911,9 @@ export function phantasmalApp(): PhantasmalApp {
 			requestAnimationFrame(() => {
 				const panel = document.getElementById("remove-dialog");
 				if (panel) {
-					this.removeDialogFocus = trapDialogFocus(panel);
+					this.removeDialogFocus = trapDialogFocus(panel, {
+						inertRoots: dialogInertRoots(),
+					});
 				}
 			});
 		},
@@ -1891,7 +1930,9 @@ export function phantasmalApp(): PhantasmalApp {
 			requestAnimationFrame(() => {
 				const panel = document.getElementById("remove-dialog");
 				if (panel) {
-					this.removeDialogFocus = trapDialogFocus(panel);
+					this.removeDialogFocus = trapDialogFocus(panel, {
+						inertRoots: dialogInertRoots(),
+					});
 				}
 			});
 		},
@@ -1908,7 +1949,9 @@ export function phantasmalApp(): PhantasmalApp {
 			requestAnimationFrame(() => {
 				const panel = document.getElementById("remove-dialog");
 				if (panel) {
-					this.removeDialogFocus = trapDialogFocus(panel);
+					this.removeDialogFocus = trapDialogFocus(panel, {
+						inertRoots: dialogInertRoots(),
+					});
 				}
 			});
 		},
@@ -1927,7 +1970,9 @@ export function phantasmalApp(): PhantasmalApp {
 			requestAnimationFrame(() => {
 				const panel = document.getElementById("remove-dialog");
 				if (panel) {
-					this.removeDialogFocus = trapDialogFocus(panel);
+					this.removeDialogFocus = trapDialogFocus(panel, {
+						inertRoots: dialogInertRoots(),
+					});
 				}
 			});
 		},
