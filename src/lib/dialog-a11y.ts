@@ -7,15 +7,28 @@ export type DialogFocusSession = {
 	release: () => void;
 };
 
+export type TrapDialogFocusOptions = {
+	/** Elements set `inert` while the dialog is open (e.g. app shell). */
+	inertRoots?: HTMLElement[];
+};
+
 function focusableElements(root: HTMLElement): HTMLElement[] {
 	return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
 		(el) => !el.hasAttribute("disabled") && el.getAttribute("aria-hidden") !== "true",
 	);
 }
 
-export function trapDialogFocus(dialog: HTMLElement): DialogFocusSession {
+export function trapDialogFocus(
+	dialog: HTMLElement,
+	options: TrapDialogFocusOptions = {},
+): DialogFocusSession {
 	const previouslyFocused =
 		document.activeElement instanceof HTMLElement ? document.activeElement : null;
+	const inertRoots = options.inertRoots?.filter(Boolean) ?? [];
+
+	for (const root of inertRoots) {
+		root.inert = true;
+	}
 
 	const onKeyDown = (event: KeyboardEvent): void => {
 		if (event.key === "Escape") {
@@ -56,6 +69,9 @@ export function trapDialogFocus(dialog: HTMLElement): DialogFocusSession {
 	return {
 		release() {
 			dialog.removeEventListener("keydown", onKeyDown);
+			for (const root of inertRoots) {
+				root.inert = false;
+			}
 			previouslyFocused?.focus();
 		},
 	};

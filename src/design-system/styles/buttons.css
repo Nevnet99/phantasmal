@@ -9,6 +9,7 @@
 	font-size: 0.95rem;
 	line-height: 1.2;
 	cursor: pointer;
+	scale: 1;
 }
 
 .ds-btn:hover:not(:disabled) {
@@ -23,8 +24,8 @@
 
 .ds-btn--danger {
 	border-color: color-mix(in srgb, var(--color-danger) 55%, var(--color-line));
-	background: color-mix(in srgb, var(--color-danger) 16%, transparent);
-	color: var(--color-danger);
+	background: color-mix(in srgb, var(--color-danger) 22%, var(--color-ground));
+	color: var(--color-ink);
 }
 
 .ds-btn:disabled {

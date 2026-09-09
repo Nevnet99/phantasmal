@@ -22,7 +22,7 @@
 			<p class="app__loading" x-show="isLoading">Starting…</p>
 
 			<section class="welcome" aria-label="Welcome" x-show="isWelcome" x-cloak>
-				<p class="welcome__brand">Phantasmal</p>
+				<p class="welcome__brand">phantasmal</p>
 				<h1 class="welcome__title">Welcome</h1>
 				<p class="welcome__lede">
 					Build systems for the person you want to become—habits, breaks, and a journal in one
@@ -89,8 +89,8 @@
 						<img
 							class="sidebar__logo"
 							src="/frog-icon.png?v=crimson"
-							width="36"
-							height="36"
+							width="30"
+							height="30"
 							alt=""
 						/>
 						<span class="sidebar__brand-name">phantasmal</span>
@@ -127,11 +127,16 @@
 					<section class="panel" x-show="isSettings" aria-labelledby="settings-title">
 						<h1 id="settings-title" class="panel__title">Settings</h1>
 						<p class="panel__lede">
-							Theme, reminders, vault folder, credits, and how you clone or update this app on this
+							Theme, reminders, vault folder, credits, and updates from GitHub Releases on this
 							machine.
 						</p>
 
-						<div class="settings-tabs" role="tablist" aria-label="Settings sections">
+						<div
+							class="settings-tabs"
+							role="tablist"
+							aria-label="Settings sections"
+							@keydown="onSettingsTabKeydown($event)"
+						>
 							<button
 								type="button"
 								class="settings-tabs__tab"
@@ -139,6 +144,7 @@
 								role="tab"
 								id="settings-tab-ui"
 								:aria-selected="isSettingsUi"
+								:tabindex="isSettingsUi ? 0 : -1"
 								aria-controls="settings-panel-ui"
 								@click="setSettingsTab('ui')"
 							>
@@ -151,6 +157,7 @@
 								role="tab"
 								id="settings-tab-habits"
 								:aria-selected="isSettingsHabits"
+								:tabindex="isSettingsHabits ? 0 : -1"
 								aria-controls="settings-panel-habits"
 								@click="setSettingsTab('habits')"
 							>
@@ -163,6 +170,7 @@
 								role="tab"
 								id="settings-tab-vault"
 								:aria-selected="isSettingsVault"
+								:tabindex="isSettingsVault ? 0 : -1"
 								aria-controls="settings-panel-vault"
 								@click="setSettingsTab('vault')"
 							>
@@ -175,6 +183,7 @@
 								role="tab"
 								id="settings-tab-about"
 								:aria-selected="isSettingsAbout"
+								:tabindex="isSettingsAbout ? 0 : -1"
 								aria-controls="settings-panel-about"
 								@click="setSettingsTab('about')"
 							>
@@ -187,6 +196,7 @@
 								role="tab"
 								id="settings-tab-updates"
 								:aria-selected="isSettingsUpdates"
+								:tabindex="isSettingsUpdates ? 0 : -1"
 								aria-controls="settings-panel-updates"
 								@click="setSettingsTab('updates')"
 							>
@@ -702,7 +712,7 @@
 												</button>
 											</template>
 										</div>
-										<div class="habit-graph__streak-head" title="Streak">Streak</div>
+										<div class="habit-graph__streak-head" title="Streak">Str</div>
 										<template x-for="section in track.habitGraph.sections" :key="section.id">
 											<div class="habit-graph__block">
 												<div
@@ -869,7 +879,10 @@
 										</header>
 										<ul class="habit-list">
 											<template x-for="habit in group.habits" :key="habit.id">
-												<li :class="habitRowWrapClass(habit)">
+												<li
+													:class="habitRowWrapClass(habit)"
+													:style="'--habit-color: ' + habit.color"
+												>
 													<div class="habit-list__stack-moves">
 														<button
 															type="button"
@@ -1483,15 +1496,19 @@
 							</section>
 
 							<div class="journal-editor">
-								<input
-									class="journal-editor__title"
-									type="text"
-									name="journal-title"
-									placeholder="Title"
-									autocomplete="off"
-									x-model="journalTitle"
-									@input="scheduleJournalSave()"
-								/>
+								<label class="journal-editor__title-label" for="journal-entry-title">
+									<span class="visually-hidden">Entry title</span>
+									<input
+										id="journal-entry-title"
+										class="journal-editor__title"
+										type="text"
+										name="journal-title"
+										placeholder="Title"
+										autocomplete="off"
+										x-model="journalTitle"
+										@input="scheduleJournalSave()"
+									/>
+								</label>
 
 								<div class="journal-editor__body-wrap">
 									<ds-markdown-editor
@@ -1845,9 +1862,7 @@
 				<div class="dialog__panel">
 					<h2 id="remove-dialog-title" class="dialog__title" x-text="removeDialogTitle"></h2>
 					<p class="dialog__copy" x-text="removeDialogCopy"></p>
-					<p class="dialog__warn" x-show="!isRemoveJournal">
-						Delete permanently is destructive and cannot be undone.
-					</p>
+					<p class="dialog__warn" x-show="!isRemoveJournal">Permanent delete cannot be undone.</p>
 					<label class="field" x-show="!isRemoveJournal">
 						<span class="field__label"
 							>Archive note <span class="field__optional">optional</span></span

@@ -1,6 +1,7 @@
 @import "./fonts.css";
 @import "./buttons.css";
 @import "./toggle.css";
+@import "./motion.css";
 
 :root {
 	--font-display: "Geist Variable", "Geist Fallback", system-ui, sans-serif;
@@ -19,15 +20,15 @@
 	--radius-md: 0;
 	--control-pad-y: 0.4rem;
 	--control-pad-x: 0.7rem;
-	--sidebar-width: 13rem;
+	--sidebar-width: 10.5rem;
 	--nav-min-height: 1.65rem;
-	/* Dark theme (default) */
-	--color-ground: #1a1f1c;
-	--color-ink: #e8efe6;
-	--color-muted: #9aab9e;
-	--color-line: #2f3a33;
-	--color-accent: #8fbc8f;
-	--color-danger: #e8a090;
+	/* Dark theme (default) — sage ink / dusty lilac accent / burnt coral / deep charcoal */
+	--color-ground: #363938;
+	--color-ink: #c2cdc8;
+	--color-muted: #adbcb5;
+	--color-line: #59555a;
+	--color-accent: #e4c3e0;
+	--color-danger: #d95a3b;
 }
 
 :root[data-theme="light"] {
@@ -49,7 +50,7 @@
 	--radius-md: 0.4rem;
 	--control-pad-y: 0.5rem;
 	--control-pad-x: 0.85rem;
-	--sidebar-width: 14.5rem;
+	--sidebar-width: 11.5rem;
 	--nav-min-height: 1.9rem;
 }
 
@@ -63,7 +64,7 @@
 	--radius-md: 0.75rem;
 	--control-pad-y: 0.55rem;
 	--control-pad-x: 0.95rem;
-	--sidebar-width: 15.5rem;
+	--sidebar-width: 12.5rem;
 	--nav-min-height: 2.1rem;
 }
 
