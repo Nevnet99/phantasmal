@@ -205,6 +205,14 @@ button:focus-visible {
 	color: var(--coral);
 }
 
+.inline-code {
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--ink);
+}
+
 .display {
 	margin: 0;
 	font-weight: 500;
