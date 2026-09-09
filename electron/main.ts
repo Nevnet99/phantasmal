@@ -1,7 +1,9 @@
 import { app, BrowserWindow } from "electron";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openConfiguredVault, registerVaultIpc, syncNativeThemeFromConfig } from "./ipc";
+import { setupAutoUpdater } from "./updater";
 import { closeVault } from "./vault/fs-vault";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,6 +15,15 @@ function getPaths() {
 	};
 }
 
+function resolveAppIcon(): string | undefined {
+	const candidates = [
+		path.join(__dirname, "../build/icon.png"),
+		path.join(__dirname, "../public/frog-icon.png"),
+		path.join(__dirname, "../dist/frog-icon.png"),
+	];
+	return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
 function createWindow() {
 	const win = new BrowserWindow({
 		width: 1100,
@@ -20,6 +31,7 @@ function createWindow() {
 		minWidth: 900,
 		minHeight: 600,
 		title: "Phantasmal",
+		icon: resolveAppIcon(),
 		webPreferences: {
 			preload: path.join(__dirname, "preload.mjs"),
 			contextIsolation: true,
@@ -38,6 +50,7 @@ app.whenReady().then(() => {
 	registerVaultIpc(getPaths);
 	syncNativeThemeFromConfig(getPaths().userData);
 	openConfiguredVault(getPaths());
+	setupAutoUpdater();
 	createWindow();
 
 	app.on("activate", () => {

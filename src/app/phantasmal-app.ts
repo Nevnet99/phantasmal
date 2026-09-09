@@ -8,6 +8,7 @@ import type {
 } from "@/shared/habits";
 import { JOURNAL_GRAPH_ID, WEEKDAY_LABELS } from "@/shared/habits";
 import type { BreakHabitOption, BreakView } from "@/shared/break";
+import type { AppAbout, AppUpdateStatus } from "@/shared/app";
 import type { IdentityHabitOption, IdentityView } from "@/shared/identity";
 import {
 	JOURNAL_MOODS,
@@ -27,7 +28,7 @@ import type { DsMarkdownEditor } from "@/design-system/components/markdown-edito
 import { NAV_ITEMS, isAppRoute, navItemById, type AppRoute, type NavItem } from "./nav";
 
 export type AppScreen = "loading" | "welcome" | "setup" | "app";
-export type SettingsTab = "ui" | "vault" | "habits";
+export type SettingsTab = "ui" | "vault" | "habits" | "about" | "updates";
 export type ResolvedTheme = "light" | "dark";
 export type ScheduleKind = "daily" | "weekly" | "every_n_days";
 export type TrackVizMode = TrackViz;
@@ -253,6 +254,10 @@ type PhantasmalApp = {
 	journalSaveTimer: number;
 	journalTagQuery: string;
 	journalTagOpen: boolean;
+	appAbout: AppAbout;
+	appUpdate: AppUpdateStatus;
+	appUpdateError: string;
+	appUpdateUnsub: (() => void) | null;
 	navItems: NavItem[];
 	get isLoading(): boolean;
 	get isWelcome(): boolean;
@@ -267,6 +272,12 @@ type PhantasmalApp = {
 	get isSettingsUi(): boolean;
 	get isSettingsVault(): boolean;
 	get isSettingsHabits(): boolean;
+	get isSettingsAbout(): boolean;
+	get isSettingsUpdates(): boolean;
+	get canCheckAppUpdate(): boolean;
+	get canDownloadAppUpdate(): boolean;
+	get canInstallAppUpdate(): boolean;
+	get isAppUpdateBusy(): boolean;
 	get hasArchivedHabits(): boolean;
 	get hasArchivedIdentities(): boolean;
 	get hasArchivedBreaks(): boolean;
@@ -355,6 +366,12 @@ type PhantasmalApp = {
 	backToTrack(): void;
 	isActive(id: AppRoute): boolean;
 	setSettingsTab(tab: SettingsTab): void;
+	refreshAbout(): Promise<void>;
+	refreshAppUpdate(): Promise<void>;
+	openAppLink(href: string): Promise<void>;
+	checkAppUpdate(): Promise<void>;
+	downloadAppUpdate(): Promise<void>;
+	installAppUpdate(): Promise<void>;
 	applyPrefs(prefs: AppPrefs): void;
 	setDensity(density: UiDensity): Promise<void>;
 	setTheme(theme: UiTheme): Promise<void>;
@@ -575,6 +592,24 @@ export function phantasmalApp(): PhantasmalApp {
 		journalSaveTimer: 0,
 		journalTagQuery: "",
 		journalTagOpen: false,
+		appAbout: {
+			name: "Phantasmal",
+			version: "",
+			description: "",
+			links: [],
+			credits: [],
+		},
+		appUpdate: {
+			packaged: false,
+			currentVersion: "",
+			state: "idle",
+			availableVersion: "",
+			progress: 0,
+			summary: "Checking updates requires a packaged build.",
+			error: "",
+		},
+		appUpdateError: "",
+		appUpdateUnsub: null,
 		navItems: NAV_ITEMS,
 
 		get isLoading() {
@@ -627,6 +662,34 @@ export function phantasmalApp(): PhantasmalApp {
 
 		get isSettingsHabits() {
 			return this.settingsTab === "habits";
+		},
+
+		get isSettingsAbout() {
+			return this.settingsTab === "about";
+		},
+
+		get isSettingsUpdates() {
+			return this.settingsTab === "updates";
+		},
+
+		get canCheckAppUpdate() {
+			return !this.isAppUpdateBusy;
+		},
+
+		get canDownloadAppUpdate() {
+			return (
+				this.appUpdate.packaged && this.appUpdate.state === "available" && !this.isAppUpdateBusy
+			);
+		},
+
+		get canInstallAppUpdate() {
+			return (
+				this.appUpdate.packaged && this.appUpdate.state === "downloaded" && !this.isAppUpdateBusy
+			);
+		},
+
+		get isAppUpdateBusy() {
+			return this.appUpdate.state === "checking" || this.appUpdate.state === "downloading";
 		},
 
 		get hasArchivedHabits() {
@@ -1091,6 +1154,84 @@ export function phantasmalApp(): PhantasmalApp {
 				void this.refreshArchivedHabits();
 				void this.refreshArchivedIdentities();
 				void this.refreshArchivedBreaks();
+			}
+			if (tab === "about") {
+				void this.refreshAbout();
+			}
+			if (tab === "updates") {
+				void this.refreshAppUpdate();
+			}
+		},
+
+		async refreshAbout() {
+			const api = window.phantasmal?.app;
+			if (!api) return;
+			try {
+				this.appAbout = await api.getAbout();
+			} catch (error) {
+				this.appUpdateError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async refreshAppUpdate() {
+			const api = window.phantasmal?.app;
+			if (!api) {
+				this.appUpdateError = "Updates are only available in the Electron app.";
+				return;
+			}
+			this.appUpdateError = "";
+			try {
+				if (!this.appUpdateUnsub) {
+					this.appUpdateUnsub = api.onUpdateStatus((status) => {
+						this.appUpdate = status;
+					});
+				}
+				this.appUpdate = await api.getUpdateStatus();
+			} catch (error) {
+				this.appUpdateError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async openAppLink(href) {
+			const api = window.phantasmal?.app;
+			if (!api || !href) return;
+			try {
+				await api.openExternal(href);
+			} catch (error) {
+				this.appUpdateError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async checkAppUpdate() {
+			const api = window.phantasmal?.app;
+			if (!api) return;
+			this.appUpdateError = "";
+			try {
+				this.appUpdate = await api.checkForUpdates();
+			} catch (error) {
+				this.appUpdateError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async downloadAppUpdate() {
+			const api = window.phantasmal?.app;
+			if (!api) return;
+			this.appUpdateError = "";
+			try {
+				this.appUpdate = await api.downloadUpdate();
+			} catch (error) {
+				this.appUpdateError = error instanceof Error ? error.message : String(error);
+			}
+		},
+
+		async installAppUpdate() {
+			const api = window.phantasmal?.app;
+			if (!api) return;
+			this.appUpdateError = "";
+			try {
+				await api.installUpdate();
+			} catch (error) {
+				this.appUpdateError = error instanceof Error ? error.message : String(error);
 			}
 		},
 

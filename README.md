@@ -45,3 +45,33 @@ Each machine stores only a pointer to that folder in its local app config. Edit 
 bun install
 bun run dev
 ```
+
+## Packaged builds & updates
+
+Ship installers so people can download Phantasmal without cloning the repo.
+
+### Publish from GitHub Actions (recommended)
+
+1. Bump `"version"` in `package.json` (e.g. `0.0.2`) and push to `main`, **or** pass the
+   version when you run the workflow.
+2. GitHub → **Actions** → **Release** → **Run workflow**.
+3. Optionally set the version / mark the release as a draft.
+4. The workflow builds Linux (AppImage), macOS (dmg + zip), and Windows (NSIS) and uploads
+   them to a [GitHub Release](https://github.com/Nevnet99/phantasmal/releases).
+
+You can also push a tag like `v0.0.2` (matching `package.json`) to trigger the same workflow.
+
+### Local build / publish
+
+```bash
+# Build Linux AppImage / macOS dmg+zip / Windows NSIS into release/
+bun run dist
+
+# Build and publish to GitHub Releases (set GH_TOKEN with repo scope)
+bun run release
+```
+
+Packaged apps check Releases from **Settings → Updates**, download, then **Restart & install**.
+Dev mode (`bun run dev`) cannot auto-update — only packaged installs can.
+
+macOS artifacts from CI are unsigned until you add Apple signing secrets.

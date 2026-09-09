@@ -31,11 +31,17 @@ Outlined Variable for icons (same self-hosted `@fontsource-variable` approach).
 - Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
 - First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app` on Track.
 - **Settings** (sidebar): tabs for **UI** (theme + layout density), **Habits**
-  (daily reminder + archived habits/identities/breaks browse/restore), and **Vault** (path / move / open).
+  (daily reminder + archived habits/identities/breaks browse/restore), **Vault**
+  (path / move / open), **About** (credits + links), and **Updates** (check GitHub
+  Releases, download, restart to install in packaged builds).
 - Default chrome is **compact** (0 radius, tight spacing) and **dark**. Prefs are stored per machine in
   `userData/config.json` as `uiDensity` (`compact` | `comfortable` | `roomy`),
   `uiTheme` (`dark` | `light` | `system`), and `dailyReminder` (boolean; once-per-day
   OS notification when habits remain due). Dock/taskbar badge shows remaining due today.
+- **Packaging:** GitHub Actions → **Release** (workflow_dispatch or `v*` tag) builds
+  Linux/macOS/Windows and publishes to GitHub Releases. Locally: `bun run dist` /
+  `bun run release` (needs `GH_TOKEN`). Downloaded apps use `electron-updater` from
+  Settings → Updates.
 
 ## Data vault
 

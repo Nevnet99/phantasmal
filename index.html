@@ -8,6 +8,7 @@
 			content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self';"
 		/>
 		<title>Phantasmal</title>
+		<link rel="icon" type="image/png" href="/frog-icon.png?v=crimson" />
 		<style>
 			[x-cloak] {
 				display: none !important;
@@ -84,7 +85,16 @@
 
 			<div class="shell" x-show="isApp" x-cloak>
 				<aside class="sidebar" aria-label="Primary">
-					<p class="sidebar__brand">Phantasmal</p>
+					<p class="sidebar__brand">
+						<img
+							class="sidebar__logo"
+							src="/frog-icon.png?v=crimson"
+							width="36"
+							height="36"
+							alt=""
+						/>
+						<span class="sidebar__brand-name">phantasmal</span>
+					</p>
 					<nav class="sidebar__nav" aria-label="Sections">
 						<template x-for="item in navItems" :key="item.id">
 							<button
@@ -117,8 +127,8 @@
 					<section class="panel" x-show="isSettings" aria-labelledby="settings-title">
 						<h1 id="settings-title" class="panel__title">Settings</h1>
 						<p class="panel__lede">
-							Theme, reminders, archived habits and identities, and where your vault folder lives on
-							this machine.
+							Theme, reminders, vault folder, credits, and how you clone or update this app on this
+							machine.
 						</p>
 
 						<div class="settings-tabs" role="tablist" aria-label="Settings sections">
@@ -157,6 +167,30 @@
 								@click="setSettingsTab('vault')"
 							>
 								Vault
+							</button>
+							<button
+								type="button"
+								class="settings-tabs__tab"
+								:class="isSettingsAbout && 'settings-tabs__tab--active'"
+								role="tab"
+								id="settings-tab-about"
+								:aria-selected="isSettingsAbout"
+								aria-controls="settings-panel-about"
+								@click="setSettingsTab('about')"
+							>
+								About
+							</button>
+							<button
+								type="button"
+								class="settings-tabs__tab"
+								:class="isSettingsUpdates && 'settings-tabs__tab--active'"
+								role="tab"
+								id="settings-tab-updates"
+								:aria-selected="isSettingsUpdates"
+								aria-controls="settings-panel-updates"
+								@click="setSettingsTab('updates')"
+							>
+								Updates
 							</button>
 						</div>
 
@@ -462,6 +496,112 @@
 								</button>
 								<button type="button" class="ds-btn" @click="openExisting()" :disabled="busy">
 									Open existing vault…
+								</button>
+							</div>
+						</div>
+
+						<div
+							class="settings-panel"
+							role="tabpanel"
+							id="settings-panel-about"
+							aria-labelledby="settings-tab-about"
+							x-show="isSettingsAbout"
+						>
+							<h2 class="settings-panel__title">Phantasmal</h2>
+							<p class="settings-panel__copy" x-text="appAbout.description"></p>
+							<p class="panel__path" x-show="appAbout.version">
+								Version <span x-text="appAbout.version"></span>
+							</p>
+
+							<h2 class="settings-panel__title">Links</h2>
+							<p class="settings-panel__copy">Open these in your browser.</p>
+							<ul class="about-list">
+								<template x-for="link in appAbout.links" :key="link.id">
+									<li class="about-list__item">
+										<button type="button" class="about-list__link" @click="openAppLink(link.href)">
+											<span class="about-list__label" x-text="link.label"></span>
+											<span class="about-list__blurb" x-text="link.blurb"></span>
+										</button>
+									</li>
+								</template>
+							</ul>
+
+							<h2 class="settings-panel__title">Credits</h2>
+							<p class="settings-panel__copy">People and tools this workspace leans on.</p>
+							<ul class="about-list">
+								<template x-for="credit in appAbout.credits" :key="credit.id">
+									<li class="about-list__item about-list__item--static">
+										<span class="about-list__label" x-text="credit.label"></span>
+										<span class="about-list__blurb" x-text="credit.blurb"></span>
+									</li>
+								</template>
+							</ul>
+						</div>
+
+						<div
+							class="settings-panel"
+							role="tabpanel"
+							id="settings-panel-updates"
+							aria-labelledby="settings-tab-updates"
+							x-show="isSettingsUpdates"
+						>
+							<h2 class="settings-panel__title">App updates</h2>
+							<p class="settings-panel__copy">
+								Packaged installs check GitHub Releases for a newer build, download it, then restart
+								to install. Development runs (<code class="inline-code">bun run dev</code>) cannot
+								auto-update.
+							</p>
+							<p class="panel__path" x-show="appUpdate.currentVersion">
+								Installed <span x-text="appUpdate.currentVersion"></span>
+								<span x-show="appUpdate.availableVersion">
+									→ <span x-text="appUpdate.availableVersion"></span>
+								</span>
+							</p>
+							<p class="settings-panel__copy" x-text="appUpdate.summary"></p>
+							<p
+								class="settings-panel__copy"
+								x-show="appUpdate.state === 'downloading'"
+								x-text="appUpdate.progress + '%'"
+							></p>
+							<p
+								class="setup__error"
+								x-show="appUpdateError || appUpdate.error"
+								x-text="appUpdateError || appUpdate.error"
+								role="alert"
+							></p>
+							<div class="panel__actions">
+								<button
+									type="button"
+									class="ds-btn ds-btn--primary"
+									:disabled="!canCheckAppUpdate"
+									@click="checkAppUpdate()"
+								>
+									Check for updates
+								</button>
+								<button
+									type="button"
+									class="ds-btn"
+									x-show="canDownloadAppUpdate"
+									:disabled="!canDownloadAppUpdate"
+									@click="downloadAppUpdate()"
+								>
+									Download update
+								</button>
+								<button
+									type="button"
+									class="ds-btn ds-btn--primary"
+									x-show="canInstallAppUpdate"
+									:disabled="!canInstallAppUpdate"
+									@click="installAppUpdate()"
+								>
+									Restart &amp; install
+								</button>
+								<button
+									type="button"
+									class="ds-btn"
+									@click="openAppLink('https://github.com/Nevnet99/phantasmal/releases')"
+								>
+									Open releases
 								</button>
 							</div>
 						</div>

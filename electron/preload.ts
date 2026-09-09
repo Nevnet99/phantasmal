@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import { APP_CHANNELS, type AppAbout, type AppApi, type AppUpdateStatus } from "../src/shared/app";
 import {
 	BREAK_CHANNELS,
 	type BreakApi,
@@ -129,6 +130,27 @@ const reminders: RemindersApi = {
 		ipcRenderer.invoke(REMINDER_CHANNELS.syncDueToday, remaining, today) as Promise<void>,
 };
 
+const appApi: AppApi = {
+	getAbout: () => ipcRenderer.invoke(APP_CHANNELS.getAbout) as Promise<AppAbout>,
+	openExternal: (url: string) =>
+		ipcRenderer.invoke(APP_CHANNELS.openExternal, url) as Promise<void>,
+	getUpdateStatus: () =>
+		ipcRenderer.invoke(APP_CHANNELS.getUpdateStatus) as Promise<AppUpdateStatus>,
+	checkForUpdates: () =>
+		ipcRenderer.invoke(APP_CHANNELS.checkForUpdates) as Promise<AppUpdateStatus>,
+	downloadUpdate: () => ipcRenderer.invoke(APP_CHANNELS.downloadUpdate) as Promise<AppUpdateStatus>,
+	installUpdate: () => ipcRenderer.invoke(APP_CHANNELS.installUpdate) as Promise<void>,
+	onUpdateStatus: (listener) => {
+		const handler = (_event: Electron.IpcRendererEvent, status: AppUpdateStatus) => {
+			listener(status);
+		};
+		ipcRenderer.on(APP_CHANNELS.updateStatusEvent, handler);
+		return () => {
+			ipcRenderer.removeListener(APP_CHANNELS.updateStatusEvent, handler);
+		};
+	},
+};
+
 contextBridge.exposeInMainWorld("phantasmal", {
 	platform: process.platform,
 	vault,
@@ -138,4 +160,5 @@ contextBridge.exposeInMainWorld("phantasmal", {
 	breaks,
 	journal,
 	reminders,
+	app: appApi,
 });

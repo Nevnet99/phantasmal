@@ -10,6 +10,9 @@ import {
 	setUiTheme,
 	setVaultPath,
 } from "./config";
+import { buildAppAbout } from "./about";
+import { checkForUpdates, downloadUpdate, getUpdateStatus, installUpdate } from "./updater";
+import { APP_CHANNELS, isAllowedExternalUrl } from "../src/shared/app";
 import { closeVault, getOpenVault, looksLikeVault, openVaultAt } from "./vault/fs-vault";
 import {
 	archiveHabit,
@@ -518,5 +521,24 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 			throw new Error("Invalid journal entry.");
 		}
 		removeJournal(id);
+	});
+
+	ipcMain.handle(APP_CHANNELS.getAbout, () => buildAppAbout());
+
+	ipcMain.handle(APP_CHANNELS.openExternal, async (_event, url: unknown) => {
+		if (typeof url !== "string" || !isAllowedExternalUrl(url)) {
+			throw new Error("Invalid link.");
+		}
+		await shell.openExternal(url);
+	});
+
+	ipcMain.handle(APP_CHANNELS.getUpdateStatus, () => getUpdateStatus());
+
+	ipcMain.handle(APP_CHANNELS.checkForUpdates, () => checkForUpdates());
+
+	ipcMain.handle(APP_CHANNELS.downloadUpdate, () => downloadUpdate());
+
+	ipcMain.handle(APP_CHANNELS.installUpdate, () => {
+		installUpdate();
 	});
 }
