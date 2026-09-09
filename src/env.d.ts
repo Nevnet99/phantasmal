@@ -1,6 +1,7 @@
 export {};
 
 import type { BreakApi } from "./shared/break";
+import type { AppApi } from "./shared/app";
 import type { HabitsApi } from "./shared/habits";
 import type { IdentityApi } from "./shared/identity";
 import type { JournalApi } from "./shared/journal";
@@ -18,6 +19,7 @@ declare global {
 			breaks: BreakApi;
 			journal: JournalApi;
 			reminders: RemindersApi;
+			app: AppApi;
 		};
 	}
 }

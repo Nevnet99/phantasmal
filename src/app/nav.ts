@@ -51,7 +51,7 @@ export const NAV_ITEMS: NavItem[] = [
 export const SETTINGS_NAV: NavItem = {
 	id: "settings",
 	label: "Settings",
-	blurb: "Density, vault location, and machine preferences.",
+	blurb: "UI, vault, credits, and app updates from GitHub Releases.",
 	enabled: true,
 };
 
