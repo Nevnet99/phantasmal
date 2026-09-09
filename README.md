@@ -1,8 +1,16 @@
 # Phantasmal
 
-Local-first Atomic Habits workspace (Electron). Track habits, design systems for change, break bad habits, and journal — with an Obsidian-style file vault you can sync via Google Drive or Dropbox.
+Local-first Atomic Habits workspace (Electron) plus an Astro marketing site — Nx monorepo.
 
-**UI:** Lit for the design system only; Alpine.js for app screens (minimal JS).
+**UI (desktop):** Lit for the design system only; Alpine.js for app screens (minimal JS).
+
+## Layout
+
+```
+apps/
+  desktop/    Electron + Vite app
+  marketing/  Astro site (phantasmal.app)
+```
 
 ## Download
 
@@ -40,12 +48,42 @@ works in these packaged apps, not when running from source with `bun run dev`.
 
 | Command | Purpose |
 | --- | --- |
-| `bun run dev` | Vite + Electron window |
-| `bun run build` | Typecheck and production bundles |
-| `bun run lint` | oxlint |
+| `bun run dev` | Desktop: Vite + Electron |
+| `bun run dev:marketing` | Marketing: Astro on :4321 |
+| `bun run build` | Build all apps (Nx) |
+| `bun run lint` | oxlint across apps |
 | `bun run format` | Prettier write |
-| `bun run test` | Vitest |
-| `bun run check` | lint → format:check → test → build |
+| `bun run test` | Vitest (desktop) |
+| `bun run check` | lint → format:check → typecheck → test → build |
+| `bun run dist` / `bun run release` | Package / publish desktop |
+| `bun run sync:downloads -- --version 0.0.2` | Pull release installers into the marketing site (CI does this) |
+
+## Download page
+
+`/download` detects Linux / macOS / Windows and offers the matching installer.
+
+Stable files live in `apps/marketing/public/downloads/` (Git LFS):
+
+- `phantasmal-linux.AppImage`
+- `phantasmal-mac.dmg`
+- `phantasmal-windows.exe`
+
+After each **Release** workflow run (non-draft), CI opens a PR that updates those files and `manifest.json`. Merge that PR so the deployed marketing site serves the new builds.
+
+Until the first sync lands, the download page falls back to [GitHub Releases](https://github.com/Nevnet99/phantasmal/releases/latest).
+
+## Marketing site (Vercel)
+
+Host `apps/marketing` on Vercel:
+
+1. Import the GitHub repo in Vercel.
+2. Set **Root Directory** to `apps/marketing`.
+3. Framework: Astro (see `apps/marketing/vercel.json`).
+4. Production branch: `main` (or merge download-image PRs so prod gets new installers).
+
+```bash
+bun run dev:marketing
+```
 
 ## Vault location
 
@@ -73,25 +111,33 @@ bun install
 bun run dev
 ```
 
+Marketing site:
+
+```bash
+bun run dev:marketing
+```
+
 ## Packaged builds & updates
 
 Ship installers so people can download Phantasmal without cloning the repo.
 
 ### Publish from GitHub Actions (recommended)
 
-1. Bump `"version"` in `package.json` (e.g. `0.0.2`) and push to `main`, **or** pass the
+1. Bump `"version"` in `apps/desktop/package.json` (e.g. `0.0.2`) and push to `main`, **or** pass the
    version when you run the workflow.
 2. GitHub → **Actions** → **Release** → **Run workflow**.
 3. Optionally set the version / mark the release as a draft.
 4. The workflow builds Linux (AppImage), macOS (dmg + zip), and Windows (NSIS) and uploads
    them to a [GitHub Release](https://github.com/Nevnet99/phantasmal/releases).
+5. Unless the release is a draft, a follow-up job copies those installers into
+   `apps/marketing/public/downloads/` and opens a PR. Merge it to update the site’s `/download` page.
 
-You can also push a tag like `v0.0.2` (matching `package.json`) to trigger the same workflow.
+You can also push a tag like `v0.0.2` (matching `apps/desktop/package.json`) to trigger the same workflow.
 
 ### Local build / publish
 
 ```bash
-# Build Linux AppImage / macOS dmg+zip / Windows NSIS into release/
+# Build Linux AppImage / macOS dmg+zip / Windows NSIS into apps/desktop/release/
 bun run dist
 
 # Build and publish to GitHub Releases (set GH_TOKEN with repo scope)

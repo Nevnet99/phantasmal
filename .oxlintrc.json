@@ -3,5 +3,14 @@
 	"categories": {
 		"correctness": "error"
 	},
-	"ignorePatterns": ["dist/**", "dist-electron/**", "coverage/**", "node_modules/**", "release/**"]
+	"ignorePatterns": [
+		"dist/**",
+		"dist-electron/**",
+		"coverage/**",
+		"node_modules/**",
+		"release/**",
+		".astro/**",
+		".nx/**",
+		"**/*.astro"
+	]
 }

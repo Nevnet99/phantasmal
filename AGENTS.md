@@ -1,6 +1,13 @@
 ## Development
 
-When starting the app, use:
+Nx monorepo with Bun workspaces:
+
+```
+apps/desktop/    Electron + Vite app
+apps/marketing/  Astro marketing site
+```
+
+When starting the desktop app, use:
 
 ```
 bun run dev
@@ -10,24 +17,32 @@ That starts Vite and launches the Electron window via `vite-plugin-electron`.
 The `dev` script clears `ELECTRON_RUN_AS_NODE` so Electron boots as a GUI app
 (agent/automation shells sometimes set that flag and break startup).
 
+Marketing site:
+
+```
+bun run dev:marketing
+```
+
 Run the full quality gate before committing:
 
 ```
 bun run check
 ```
 
+Paths below for the product UI refer to `apps/desktop/` unless noted.
+
 ## App shell
 
 After vault setup, the app uses a sidebar + main layout. Routes live in
-`src/app/nav.ts`. Unfinished features stay reachable as stub screens and show a
+`apps/desktop/src/app/nav.ts`. Unfinished features stay reachable as stub screens and show a
 Soon badge. Track is the default screen after vault setup.
 
 Geist Variable for UI/display, Geist Mono for paths and meta, Material Symbols
 Outlined Variable for icons (same self-hosted `@fontsource-variable` approach).
 
-- **Design system:** Lit web components under `src/design-system/` (`ds-button`,
+- **Design system:** Lit web components under `apps/desktop/src/design-system/` (`ds-button`,
   `ds-icon`, `ds-toggle`, …)
-- **App screens:** Alpine.js + HTML (`index.html`, `src/app/`) — keep app JS thin
+- **App screens:** Alpine.js + HTML (`apps/desktop/index.html`, `apps/desktop/src/app/`) — keep app JS thin
 - Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
 - First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app` on Track.
 - **Settings** (sidebar): tabs for **UI** (theme + layout density), **Habits**
@@ -39,9 +54,13 @@ Outlined Variable for icons (same self-hosted `@fontsource-variable` approach).
   `uiTheme` (`dark` | `light` | `system`), and `dailyReminder` (boolean; once-per-day
   OS notification when habits remain due). Dock/taskbar badge shows remaining due today.
 - **Packaging:** GitHub Actions → **Release** (workflow_dispatch or `v*` tag) builds
-  Linux/macOS/Windows and publishes to GitHub Releases. Locally: `bun run dist` /
-  `bun run release` (needs `GH_TOKEN`). Downloaded apps use `electron-updater` from
-  Settings → Updates.
+  Linux/macOS/Windows from `apps/desktop` and publishes to GitHub Releases. Locally: `bun run dist` /
+  `bun run release` (needs `GH_TOKEN`). Version lives in `apps/desktop/package.json`.
+  Downloaded apps use `electron-updater` from Settings → Updates.
+- **Marketing:** Astro site in `apps/marketing/` — brand chrome matches desktop charcoal / sage /
+  lilac / coral. Host on Vercel with root directory `apps/marketing`. Hero **Download** goes to
+  `/download`, which picks an installer by OS from `public/downloads/` (synced via Release → PR).
+  Installers are Git LFS; see `scripts/sync-site-downloads.ts`.
 
 ## Data vault
 

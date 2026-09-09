@@ -1,11 +1,10 @@
 {
-	"name": "phantasmal",
+	"name": "@phantasmal/source",
 	"version": "0.0.1",
 	"private": true,
-	"description": "Local-first Atomic Habits workspace for tracking, creating, and breaking habits",
+	"description": "Phantasmal monorepo — desktop app and marketing site",
 	"author": "Nevnet99",
 	"type": "module",
-	"main": "dist-electron/main.js",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Nevnet99/phantasmal.git"
@@ -13,92 +12,34 @@
 	"engines": {
 		"node": ">=22.12.0"
 	},
+	"workspaces": [
+		"apps/*"
+	],
 	"scripts": {
-		"dev": "env -u ELECTRON_RUN_AS_NODE vite",
-		"build": "tsc --noEmit && vite build",
-		"dist": "bun run build && electron-builder --publish never",
-		"release": "bun run build && electron-builder --publish always",
-		"typecheck": "tsc --noEmit",
-		"lint": "oxlint .",
-		"lint:fix": "oxlint --fix .",
+		"dev": "bun run --filter @phantasmal/desktop dev",
+		"dev:desktop": "bun run --filter @phantasmal/desktop dev",
+		"dev:marketing": "bun run --filter @phantasmal/marketing dev",
+		"build": "nx run-many -t build",
+		"build:desktop": "bun run --filter @phantasmal/desktop build",
+		"build:marketing": "bun run --filter @phantasmal/marketing build",
+		"dist": "bun run --filter @phantasmal/desktop dist",
+		"release": "bun run --filter @phantasmal/desktop release",
+		"lint": "nx run-many -t lint",
+		"typecheck": "nx run-many -t typecheck",
+		"test": "nx run-many -t test",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"check": "bun run lint && bun run format:check && bun run typecheck && bun run test && bun run build"
-	},
-	"dependencies": {
-		"@alpinejs/csp": "^3.17.2",
-		"@fontsource-variable/geist": "^5.3.0",
-		"@fontsource-variable/geist-mono": "^5.3.0",
-		"@fontsource-variable/material-symbols-outlined": "^5.3.5",
-		"@tiptap/core": "^3.31.3",
-		"@tiptap/extension-placeholder": "^3.31.3",
-		"@tiptap/pm": "^3.31.3",
-		"@tiptap/starter-kit": "^3.31.3",
-		"canvas-confetti": "^1.9.4",
-		"electron-updater": "^6.8.9",
-		"lit": "^3.3.1",
-		"tiptap-markdown": "^0.9.0"
+		"check": "bun run lint && bun run format:check && bun run typecheck && bun run test && bun run build",
+		"sync:downloads": "bun scripts/sync-site-downloads.ts"
 	},
 	"devDependencies": {
-		"@types/alpinejs": "^3.13.11",
-		"@types/canvas-confetti": "^1.9.0",
-		"@types/node": "^22.15.29",
-		"electron": "^36.3.2",
-		"electron-builder": "^26.15.3",
+		"nx": "^21.6.4",
 		"oxlint": "^0.16.12",
 		"prettier": "^3.5.3",
-		"typescript": "^5.8.3",
-		"vite": "^6.3.5",
-		"vite-plugin-electron": "^0.29.0",
-		"vite-plugin-electron-renderer": "^0.14.6",
-		"vitest": "^3.2.1"
+		"prettier-plugin-astro": "^0.14.1",
+		"typescript": "^5.8.3"
 	},
 	"trustedDependencies": [
 		"electron"
-	],
-	"build": {
-		"appId": "com.nevnet99.phantasmal",
-		"productName": "Phantasmal",
-		"icon": "build/icon.png",
-		"directories": {
-			"output": "release"
-		},
-		"files": [
-			"dist/**/*",
-			"dist-electron/**/*",
-			"package.json"
-		],
-		"publish": [
-			{
-				"provider": "github",
-				"owner": "Nevnet99",
-				"repo": "phantasmal"
-			}
-		],
-		"linux": {
-			"target": [
-				"AppImage"
-			],
-			"category": "Office",
-			"synopsis": "Local-first Atomic Habits workspace"
-		},
-		"mac": {
-			"target": [
-				"dmg",
-				"zip"
-			],
-			"category": "public.app-category.productivity"
-		},
-		"win": {
-			"target": [
-				"nsis"
-			]
-		},
-		"nsis": {
-			"oneClick": false,
-			"allowToChangeInstallationDirectory": true
-		}
-	}
+	]
 }

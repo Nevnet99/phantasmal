@@ -1,0 +1,171 @@
+---
+import Base from "../layouts/Base.astro";
+import manifest from "../../public/downloads/manifest.json";
+
+type PlatformId = "linux" | "mac" | "windows";
+
+type Platform = {
+	id: PlatformId;
+	label: string;
+	hint: string;
+	file: string;
+	url: string | null;
+	githubUrl: string | null;
+	size?: number;
+};
+
+const platforms = Object.values(manifest.platforms) as Platform[];
+const hasRelease = Boolean(manifest.version && platforms.some((p) => p.url || p.githubUrl));
+const versionLabel = manifest.version ? `v${manifest.version}` : "not synced yet";
+const sourceUrl = "https://github.com/Nevnet99/phantasmal";
+---
+
+<Base
+	title="Download phantasmal"
+	description="Download phantasmal for Linux, macOS, or Windows. The page picks the build for this computer."
+>
+	<header class="grid chrome">
+		<a class="chrome__mark g-2 g-sm-2" href="/" aria-label="phantasmal home">
+			<img src="/frog-icon.png" alt="" width="28" height="28" decoding="async" />
+		</a>
+		<nav class="chrome__nav g-10 g-sm-10" aria-label="Primary">
+			<a href="/download" aria-current="page">download</a>
+			<a href="/#features">features</a>
+			<a href={sourceUrl}>github</a>
+		</nav>
+	</header>
+
+	<main id="main" data-download-root>
+		<section class="grid" aria-labelledby="download-title">
+			<p class="meta meta--accent g-8 g-sm-6">download</p>
+			<p class="meta g-4 g-sm-6" style="text-align: end" data-version>{versionLabel}</p>
+
+			<h1 id="download-title" class="display display--md g-8 g-md-12 g-sm-12">
+				Download for your computer
+			</h1>
+			<p class="lede g-8 g-md-12 g-sm-12">
+				This page picks the installer for the system you’re on. Other platforms are listed below.
+			</p>
+
+			<div class="download-primary g-8 g-md-12 g-sm-12" data-primary style="margin-top: var(--row)">
+				<a
+					class="btn btn--primary btn--lg"
+					href={manifest.fallback.url}
+					data-primary-link
+					data-platform="unknown"
+				>
+					<span data-primary-label>Download</span>
+				</a>
+				<p class="download-primary__hint" data-primary-hint>Checking this system…</p>
+			</div>
+
+			{
+				!hasRelease && (
+					<p class="download-banner g-10 g-sm-12" role="status">
+						Installers aren’t on this site yet. Use GitHub Releases for now. After the next app
+						release, a pull request will add the files here.
+					</p>
+				)
+			}
+		</section>
+
+		<section class="grid" aria-labelledby="platforms-title">
+			<p class="meta meta--accent g-3 g-sm-12">also available</p>
+			<h2 id="platforms-title" class="display display--md g-9 g-sm-12">Every platform</h2>
+
+			{
+				platforms.map((p) => {
+					const href = p.url ?? p.githubUrl ?? manifest.fallback.url;
+					return (
+						<div class="platform-band" data-platform-row={p.id}>
+							<p class="platform__label g-3 g-sm-6">{p.label}</p>
+							<p class="platform__hint g-5 g-sm-6">{p.hint}</p>
+							<div class="platform__action g-4 g-sm-12">
+								<a
+									class="btn btn--ghost"
+									href={href}
+									data-platform-link={p.id}
+									{...(p.url ? { download: p.file } : {})}
+								>
+									Download
+								</a>
+							</div>
+						</div>
+					);
+				})
+			}
+
+			<p class="meta g-12" style="margin-top: var(--row)">
+				<a href={manifest.fallback.url}>Open GitHub Releases</a>
+				{" — "}
+				macOS builds are unsigned; right-click the app and choose Open the first time
+			</p>
+		</section>
+	</main>
+
+	<footer class="grid site-footer">
+		<span class="meta g-4 g-sm-12">phantasmal</span>
+		<nav class="chrome__nav g-8 g-sm-12" aria-label="Footer">
+			<a href="/download" aria-current="page">download</a>
+			<a href={manifest.fallback.url}>releases</a>
+			<a href={sourceUrl}>source</a>
+		</nav>
+	</footer>
+</Base>
+
+<script is:inline define:vars={{ platforms, fallbackUrl: manifest.fallback.url }}>
+	(function () {
+		const root = document.querySelector("[data-download-root]");
+		if (!root) return;
+
+		/** @type {Array<{id: string, label: string, hint: string, file: string, url: string|null, githubUrl: string|null}>} */
+		const list = platforms;
+
+		function resolveHref(p) {
+			return p.url || p.githubUrl || fallbackUrl;
+		}
+
+		function detect() {
+			const ua = navigator.userAgent || "";
+			const navPlatform =
+				navigator.userAgentData && navigator.userAgentData.platform
+					? navigator.userAgentData.platform
+					: "";
+			const hay = `${ua} ${navPlatform}`.toLowerCase();
+
+			if (/windows|win32|win64/.test(hay)) return "windows";
+			if (/android/.test(hay)) return "linux";
+			if (/iphone|ipad|ipod|ios/.test(hay)) return "mac";
+			if (/mac os|macintosh|macintel|darwin/.test(hay)) return "mac";
+			if (/linux|cros|x11/.test(hay)) return "linux";
+			return "unknown";
+		}
+
+		const id = detect();
+		const match = list.find((p) => p.id === id);
+		const primaryLink = root.querySelector("[data-primary-link]");
+		const primaryLabel = root.querySelector("[data-primary-label]");
+		const primaryHint = root.querySelector("[data-primary-hint]");
+
+		if (primaryLink && primaryLabel && primaryHint) {
+			if (match) {
+				const href = resolveHref(match);
+				primaryLink.setAttribute("href", href);
+				primaryLink.setAttribute("data-platform", match.id);
+				if (match.url && match.file) primaryLink.setAttribute("download", match.file);
+				else primaryLink.removeAttribute("download");
+				primaryLabel.textContent = `Download for ${match.label}`;
+				primaryHint.textContent = `${match.hint} · ${match.file}`;
+			} else {
+				primaryLabel.textContent = "Choose a platform";
+				primaryHint.textContent = "System not detected — pick Linux, macOS, or Windows below.";
+			}
+		}
+
+		root.querySelectorAll("[data-platform-row]").forEach((row) => {
+			if (row.getAttribute("data-platform-row") === id) {
+				row.classList.add("platform-band--detected");
+			}
+		});
+	})();
+</script>
