@@ -3,13 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-	APP_ATOMIC_HABITS_URL,
-	APP_ISSUES_URL,
-	APP_RELEASES_URL,
-	APP_REPO_URL,
-	type AppAbout,
-} from "../src/shared/app";
+import { APP_ISSUES_URL, APP_RELEASES_URL, APP_REPO_URL, type AppAbout } from "../src/shared/app";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,7 +28,7 @@ export function buildAppAbout(version = readAppVersion()): AppAbout {
 	return {
 		name: "Phantasmal",
 		version,
-		description: "Local-first Atomic Habits workspace for tracking, creating, and breaking habits.",
+		description: "Local-first habit workspace for tracking, creating, and breaking habits.",
 		links: [
 			{
 				id: "repo",
@@ -54,18 +48,12 @@ export function buildAppAbout(version = readAppVersion()): AppAbout {
 				href: APP_ISSUES_URL,
 				blurb: "Bugs and ideas welcome.",
 			},
-			{
-				id: "atomic-habits",
-				label: "Atomic Habits",
-				href: APP_ATOMIC_HABITS_URL,
-				blurb: "James Clear’s book that inspired this workspace.",
-			},
 		],
 		credits: [
 			{
 				id: "atomic-habits",
 				label: "Atomic Habits — James Clear",
-				blurb: "Core ideas: identity, four laws, and habit stacking.",
+				blurb: "Influenced identity, habit design, and stacking in this workspace.",
 			},
 			{
 				id: "electron",

@@ -2,7 +2,7 @@
 	"name": "@phantasmal/desktop",
 	"version": "0.0.1",
 	"private": true,
-	"description": "Local-first Atomic Habits workspace for tracking, creating, and breaking habits",
+	"description": "Local-first habit workspace for tracking, creating, and breaking habits",
 	"author": "Nevnet99",
 	"type": "module",
 	"main": "dist-electron/main.js",
@@ -83,7 +83,7 @@
 				"AppImage"
 			],
 			"category": "Office",
-			"synopsis": "Local-first Atomic Habits workspace",
+			"synopsis": "Local-first habit workspace",
 			"executableName": "Phantasmal",
 			"desktopName": "Phantasmal",
 			"syncDesktopName": true

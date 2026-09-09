@@ -1,4 +1,4 @@
-/** Identity statements — Atomic Habits' deepest behavior layer. */
+/** Identity statements — who you want to become, backed by linked habits. */
 
 export const IDENTITY_CHANNELS = {
 	list: "identity:list",
