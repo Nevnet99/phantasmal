@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -42,7 +43,9 @@ export function installAppImageDesktopEntry(): { desktopPath: string } | null {
 		}
 	}
 
-	const iconName = fs.existsSync(iconDest) ? LINUX_DESKTOP_ID : "Phantasmal";
+	// Absolute Icon= path — theme names often fail on Plasma after quit
+	// (pinned tile becomes a blank/generic file icon).
+	const iconValue = fs.existsSync(iconDest) ? iconDest : "Phantasmal";
 	const exec = quoteDesktopExec(appImagePath);
 	const body = [
 		"[Desktop Entry]",
@@ -51,7 +54,7 @@ export function installAppImageDesktopEntry(): { desktopPath: string } | null {
 		"Comment=Local-first habit workspace for tracking, creating, and breaking habits",
 		`Exec=${exec} --no-sandbox %U`,
 		"Terminal=false",
-		`Icon=${iconName}`,
+		`Icon=${iconValue}`,
 		`StartupWMClass=${LINUX_DESKTOP_ID}`,
 		"Categories=Office;",
 		"X-AppImage-Integrate=true",
@@ -69,7 +72,20 @@ export function installAppImageDesktopEntry(): { desktopPath: string } | null {
 		return null;
 	}
 
+	refreshIconCache(path.join(home, ".local", "share", "icons", "hicolor"));
+
 	return { desktopPath };
+}
+
+function refreshIconCache(hicolorDir: string): void {
+	try {
+		execFileSync("gtk-update-icon-cache", ["-f", "-t", hicolorDir], {
+			stdio: "ignore",
+			timeout: 5_000,
+		});
+	} catch {
+		// Optional; absolute Icon= still works without a rebuilt cache.
+	}
 }
 
 function resolveAppImageIcon(): string | undefined {
