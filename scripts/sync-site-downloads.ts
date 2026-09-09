@@ -7,8 +7,9 @@
  *   bun scripts/sync-site-downloads.ts --version 0.0.2
  *   bun scripts/sync-site-downloads.ts --version 0.0.2 --repo Nevnet99/phantasmal
  */
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile, access, mkdtemp, rm, copyFile } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 import { $ } from "bun";
 
 const ROOT = path.resolve(import.meta.dir, "..");
@@ -37,8 +38,8 @@ const PICKS: AssetPick[] = [
 		match: (n) => n.toLowerCase().endsWith(".dmg"),
 		priority: (n) => {
 			const lower = n.toLowerCase();
-			if (lower.includes("arm64") || lower.includes("aarch")) return 2;
 			if (lower.includes("universal")) return 3;
+			if (lower.includes("arm64") || lower.includes("aarch")) return 2;
 			return 1;
 		},
 	},
@@ -70,28 +71,58 @@ function normalizeVersion(raw: string): { version: string; tag: string } {
 
 type GhAsset = {
 	name: string;
-	browser_download_url: string;
+	/** Direct download URL from `gh release view` (field is `url`, not browser_download_url). */
+	url: string;
 	size: number;
 };
 
-async function listAssets(repo: string, tag: string): Promise<GhAsset[]> {
-	const out = await $`gh release view ${tag} --repo ${repo} --json assets --jq '.assets'`.text();
-	return JSON.parse(out) as GhAsset[];
+type GhAssetRaw = {
+	name?: string;
+	url?: string;
+	browserDownloadUrl?: string | null;
+	browser_download_url?: string | null;
+	size?: number;
+};
+
+function normalizeAsset(raw: GhAssetRaw): GhAsset | null {
+	const name = raw.name?.trim();
+	if (!name) return null;
+	const url = (raw.url || raw.browserDownloadUrl || raw.browser_download_url || "").trim();
+	if (!url) return null;
+	return {
+		name,
+		url,
+		size: typeof raw.size === "number" ? raw.size : 0,
+	};
 }
 
-async function downloadAsset(url: string, dest: string): Promise<void> {
-	const res = await fetch(url, {
-		headers: {
-			Accept: "application/octet-stream",
-			Authorization: process.env.GH_TOKEN ? `Bearer ${process.env.GH_TOKEN}` : "",
-			"User-Agent": "phantasmal-sync-site-downloads",
-		},
-		redirect: "follow",
-	});
-	if (!res.ok) {
-		throw new Error(`Failed to download ${url}: ${res.status} ${res.statusText}`);
+async function listAssets(repo: string, tag: string): Promise<GhAsset[]> {
+	// `gh` returns camelCase keys; `url` is the download URL (browserDownloadUrl is often null on drafts).
+	const out = await $`gh release view ${tag} --repo ${repo} --json assets`.text();
+	const parsed = JSON.parse(out) as { assets?: GhAssetRaw[] };
+	const assets = (parsed.assets ?? []).map(normalizeAsset).filter((a): a is GhAsset => a !== null);
+	return assets;
+}
+
+async function downloadAsset(
+	repo: string,
+	tag: string,
+	assetName: string,
+	dest: string,
+): Promise<void> {
+	const tmp = await mkdtemp(path.join(os.tmpdir(), "phantasmal-asset-"));
+	try {
+		await $`gh release download ${tag} --repo ${repo} --pattern ${assetName} --dir ${tmp} --clobber`;
+		const source = path.join(tmp, assetName);
+		await access(source);
+		await copyFile(source, dest);
+	} finally {
+		await rm(tmp, { recursive: true, force: true });
 	}
-	await Bun.write(dest, res);
+}
+
+function publicDownloadUrl(repo: string, tag: string, assetName: string): string {
+	return `https://github.com/${repo}/releases/download/${tag}/${encodeURIComponent(assetName)}`;
 }
 
 async function main() {
@@ -107,7 +138,12 @@ async function main() {
 
 	const assets = await listAssets(repo, tag);
 	if (assets.length === 0) {
-		throw new Error(`No assets on ${repo} ${tag}`);
+		throw new Error(`No downloadable assets on ${repo} ${tag}`);
+	}
+
+	console.log(`Found ${assets.length} assets on ${tag}:`);
+	for (const asset of assets) {
+		console.log(`  - ${asset.name} (${asset.size} bytes)`);
 	}
 
 	const platforms: Record<
@@ -123,33 +159,39 @@ async function main() {
 		}
 	> = {};
 
+	const missing: PlatformId[] = [];
+
 	for (const pick of PICKS) {
 		const candidates = assets.filter((a) => pick.match(a.name));
 		if (candidates.length === 0) {
 			console.warn(`No asset matched platform ${pick.platform}`);
+			missing.push(pick.platform);
 			continue;
 		}
 		candidates.sort((a, b) => pick.priority(b.name) - pick.priority(a.name));
 		const chosen = candidates[0]!;
 		const dest = path.join(DOWNLOADS, pick.file);
 		console.log(`Downloading ${chosen.name} → ${pick.file}`);
-		await downloadAsset(chosen.browser_download_url, dest);
+		await downloadAsset(repo, tag, chosen.name, dest);
 
 		const meta = LABELS[pick.platform];
+		const githubUrl = publicDownloadUrl(repo, tag, chosen.name);
 		platforms[pick.platform] = {
 			id: pick.platform,
 			label: meta.label,
 			hint: meta.hint,
 			file: pick.file,
 			url: `/downloads/${pick.file}`,
-			githubUrl: chosen.browser_download_url,
+			githubUrl,
 			size: chosen.size,
 		};
 	}
 
-	const missing = PICKS.filter((p) => !platforms[p.platform]).map((p) => p.platform);
 	if (missing.length > 0) {
-		throw new Error(`Missing platforms after sync: ${missing.join(", ")}`);
+		throw new Error(
+			`Missing platforms after sync: ${missing.join(", ")}. ` +
+				`Release ${tag} assets were: ${assets.map((a) => a.name).join(", ")}`,
+		);
 	}
 
 	const manifest = {
@@ -166,12 +208,10 @@ async function main() {
 	await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, "\t")}\n`, "utf8");
 	console.log(`Wrote ${MANIFEST_PATH}`);
 
-	// Ensure LFS-friendly copies exist (sanity)
 	for (const p of Object.values(platforms)) {
 		await access(path.join(DOWNLOADS, p.file));
 	}
 
-	// Touch a tiny marker so PR always has a text change if binaries are identical
 	await writeFile(path.join(DOWNLOADS, ".sync-stamp"), `${manifest.updatedAt}\n${tag}\n`, "utf8");
 }
 
