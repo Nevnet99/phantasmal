@@ -1,14 +1,14 @@
 {
 	"version": "1.0.0",
 	"tag": "v1.0.0",
-	"updatedAt": "2026-09-09T21:00:18.413Z",
+	"updatedAt": "2026-09-09T21:12:00.000Z",
 	"platforms": {
 		"linux": {
 			"id": "linux",
 			"label": "Linux",
 			"hint": "AppImage",
-			"file": "phantasmal-linux.AppImage",
-			"url": "/downloads/phantasmal-linux.AppImage",
+			"file": "Phantasmal-1.0.0.AppImage",
+			"url": null,
 			"githubUrl": "https://github.com/Nevnet99/phantasmal/releases/download/v1.0.0/Phantasmal-1.0.0.AppImage",
 			"size": 130003179
 		},
@@ -16,8 +16,8 @@
 			"id": "mac",
 			"label": "macOS",
 			"hint": "DMG",
-			"file": "phantasmal-mac.dmg",
-			"url": "/downloads/phantasmal-mac.dmg",
+			"file": "Phantasmal-1.0.0-arm64.dmg",
+			"url": null,
 			"githubUrl": "https://github.com/Nevnet99/phantasmal/releases/download/v1.0.0/Phantasmal-1.0.0-arm64.dmg",
 			"size": 123205302
 		},
@@ -25,8 +25,8 @@
 			"id": "windows",
 			"label": "Windows",
 			"hint": "Installer",
-			"file": "phantasmal-windows.exe",
-			"url": "/downloads/phantasmal-windows.exe",
+			"file": "Phantasmal-Setup-1.0.0.exe",
+			"url": null,
 			"githubUrl": "https://github.com/Nevnet99/phantasmal/releases/download/v1.0.0/Phantasmal-Setup-1.0.0.exe",
 			"size": 98469718
 		}
