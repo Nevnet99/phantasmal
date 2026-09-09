@@ -1,4 +1,4 @@
-export type AppRoute = "home" | "track" | "create" | "break" | "journal" | "identity" | "settings";
+export type AppRoute = "track" | "create" | "break" | "journal" | "identity" | "settings";
 
 export type NavItem = {
 	id: AppRoute;
@@ -8,7 +8,6 @@ export type NavItem = {
 };
 
 const APP_ROUTES: readonly AppRoute[] = [
-	"home",
 	"track",
 	"create",
 	"break",
@@ -21,14 +20,8 @@ export function isAppRoute(id: string): id is AppRoute {
 	return (APP_ROUTES as readonly string[]).includes(id);
 }
 
-/** Sidebar + home overview. Unfinished features open stub screens. */
+/** Sidebar navigation. Unfinished features open stub screens. */
 export const NAV_ITEMS: NavItem[] = [
-	{
-		id: "home",
-		label: "Home",
-		blurb: "Overview of your systems and quick links into each area.",
-		enabled: true,
-	},
 	{
 		id: "track",
 		label: "Track",
@@ -51,7 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
 		id: "identity",
 		label: "Identity",
 		blurb: "Who you want to become—the deepest layer of behavior change.",
-		enabled: false,
+		enabled: true,
 	},
 	{
 		id: "settings",

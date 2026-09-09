@@ -16,8 +16,15 @@ import {
 	shiftDayKey,
 } from "./day";
 import { isDueOn, scheduleLabel, streakOnSchedule } from "./schedule";
-import { orderByStack, stackDepth } from "./stack";
+import {
+	canMoveStackDown,
+	canMoveStackUp,
+	normalizeStackOrder,
+	orderByStack,
+	stackDepth,
+} from "./stack";
 import { isHabitActiveOn, isHabitArchived } from "./habit-status";
+import { buildTrackGroups, type IdentityLink } from "./track-groups";
 
 export function activityLevel(completed: number, total: number): ActivityLevel {
 	if (total <= 0 || completed <= 0) return 0;
@@ -57,6 +64,7 @@ export function toHabitView(
 	habit: HabitRecord,
 	day: DayKey,
 	byId: Map<string, HabitRecord> = new Map(),
+	allActive: HabitRecord[] = [...byId.values()],
 ): HabitView {
 	const due = isHabitActiveOn(habit, day) && isDueOn(habit.schedule, day);
 	const streak = streakOnSchedule(habit.completions, habit.schedule, day);
@@ -65,6 +73,7 @@ export function toHabitView(
 	const stackLabel = stackAfterName ? `After ${stackAfterName}` : "";
 	const archivedAt = habit.archivedAt ?? "";
 	const archivedDay = archivedAt.slice(0, 10);
+	const stackOrder = normalizeStackOrder(habit.stackOrder);
 	return {
 		id: habit.id,
 		name: habit.name,
@@ -76,6 +85,9 @@ export function toHabitView(
 		stackAfterName,
 		stackLabel,
 		stackDepth: stackDepth(habit.id, byId),
+		stackOrder,
+		canMoveUp: canMoveStackUp(allActive, habit.id),
+		canMoveDown: canMoveStackDown(allActive, habit.id),
 		due,
 		done: habit.completions.includes(day),
 		streak,
@@ -90,7 +102,8 @@ export function toHabitView(
 
 export function toHabitViews(habits: HabitRecord[], day: DayKey): HabitView[] {
 	const byId = new Map(habits.map((habit) => [habit.id, habit]));
-	return habits.map((habit) => toHabitView(habit, day, byId));
+	const active = habits.filter((habit) => !habit.archivedAt);
+	return habits.map((habit) => toHabitView(habit, day, byId, active));
 }
 
 /** GitHub-style contribution grid: 53 weeks × 7 days (Sun→Sat), ending on `endDay`. */
@@ -201,6 +214,7 @@ export function buildTrackSnapshot(
 	month: number,
 	year: number,
 	todayKey: DayKey = localDayKey(),
+	identities: IdentityLink[] = [],
 ): TrackSnapshot {
 	const views = orderByStack(toHabitViews(habits, selectedDay).filter((habit) => habit.due));
 	const remaining = views.filter((habit) => !habit.done);
@@ -236,6 +250,7 @@ export function buildTrackSnapshot(
 		totalCount,
 		habits: views,
 		remaining,
+		groups: buildTrackGroups(views, identities, selectedDay === todayKey),
 		graph: buildContributionGraph(habits, todayKey),
 		weekdays: WEEKDAYS,
 		calendarMonthLabel: formatMonthLabel(year, month),

@@ -17,9 +17,19 @@ import {
 	removeHabit,
 	restoreHabit,
 	toggleHabitDay,
+	moveStackHabit,
 	updateHabit,
 } from "./vault/habits";
 import { syncDueTodayReminder } from "./reminders";
+import {
+	archiveIdentity,
+	createIdentity,
+	listArchivedIdentities,
+	listIdentities,
+	removeIdentity,
+	restoreIdentity,
+	updateIdentity,
+} from "./vault/identity";
 import {
 	REMINDER_CHANNELS,
 	SETTINGS_CHANNELS,
@@ -29,6 +39,7 @@ import {
 	type UiTheme,
 } from "../src/shared/prefs";
 import { HABIT_CHANNELS, isDayKey, isTrackQuery, type HabitDraft } from "../src/shared/habits";
+import { IDENTITY_CHANNELS, isIdentityDraft } from "../src/shared/identity";
 import { VAULT_CHANNELS, type VaultStatus } from "../src/shared/vault";
 
 type Paths = {
@@ -295,6 +306,20 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 		return toggleHabitDay(id, today);
 	});
 
+	ipcMain.handle(
+		HABIT_CHANNELS.moveStack,
+		(_event, id: unknown, direction: unknown, today: unknown) => {
+			if (
+				typeof id !== "string" ||
+				(direction !== "up" && direction !== "down") ||
+				!isDayKey(today)
+			) {
+				throw new Error("Invalid stack move request.");
+			}
+			return moveStackHabit(id, direction, today);
+		},
+	);
+
 	ipcMain.handle(HABIT_CHANNELS.archive, (_event, id: unknown, note: unknown, today: unknown) => {
 		if (typeof id !== "string" || typeof note !== "string" || !isDayKey(today)) {
 			throw new Error("Invalid archive request.");
@@ -314,5 +339,52 @@ export function registerVaultIpc(getPaths: () => Paths): void {
 			throw new Error("Invalid remove request.");
 		}
 		removeHabit(id);
+	});
+
+	ipcMain.handle(IDENTITY_CHANNELS.list, () => listIdentities());
+
+	ipcMain.handle(IDENTITY_CHANNELS.listArchived, () => listArchivedIdentities());
+
+	ipcMain.handle(IDENTITY_CHANNELS.create, (_event, draft: unknown) => {
+		if (!isIdentityDraft(draft)) {
+			throw new Error("Invalid identity draft.");
+		}
+		return createIdentity({
+			statement: draft.statement,
+			note: draft.note ?? "",
+			habitIds: draft.habitIds ?? [],
+		});
+	});
+
+	ipcMain.handle(IDENTITY_CHANNELS.update, (_event, id: unknown, draft: unknown) => {
+		if (typeof id !== "string" || !isIdentityDraft(draft)) {
+			throw new Error("Invalid identity update.");
+		}
+		return updateIdentity(id, {
+			statement: draft.statement,
+			note: draft.note ?? "",
+			habitIds: draft.habitIds ?? [],
+		});
+	});
+
+	ipcMain.handle(IDENTITY_CHANNELS.archive, (_event, id: unknown, note: unknown) => {
+		if (typeof id !== "string" || typeof note !== "string") {
+			throw new Error("Invalid archive request.");
+		}
+		return archiveIdentity(id, note);
+	});
+
+	ipcMain.handle(IDENTITY_CHANNELS.restore, (_event, id: unknown) => {
+		if (typeof id !== "string") {
+			throw new Error("Invalid restore request.");
+		}
+		return restoreIdentity(id);
+	});
+
+	ipcMain.handle(IDENTITY_CHANNELS.remove, (_event, id: unknown) => {
+		if (typeof id !== "string") {
+			throw new Error("Invalid remove request.");
+		}
+		removeIdentity(id);
 	});
 }
