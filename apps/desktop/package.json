@@ -7,6 +7,7 @@
 	"license": "MIT",
 	"type": "module",
 	"main": "dist-electron/main.js",
+	"desktopName": "com.nevnet99.phantasmal",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Nevnet99/phantasmal.git"
@@ -85,7 +86,8 @@
 			],
 			"category": "Office",
 			"synopsis": "Local-first habit workspace",
-			"executableName": "Phantasmal"
+			"executableName": "Phantasmal",
+			"syncDesktopName": true
 		},
 		"mac": {
 			"target": [
