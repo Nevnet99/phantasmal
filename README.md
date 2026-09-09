@@ -1,6 +1,6 @@
 # Phantasmal
 
-Local-first Atomic Habits workspace (Electron) plus an Astro marketing site — Nx monorepo.
+Local-first habit workspace (Electron) plus an Astro marketing site — Nx monorepo.
 
 **UI (desktop):** Lit for the design system only; Alpine.js for app screens (minimal JS).
 

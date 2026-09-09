@@ -13,7 +13,6 @@ export const APP_CHANNELS = {
 export const APP_REPO_URL = "https://github.com/Nevnet99/phantasmal";
 export const APP_ISSUES_URL = "https://github.com/Nevnet99/phantasmal/issues";
 export const APP_RELEASES_URL = "https://github.com/Nevnet99/phantasmal/releases";
-export const APP_ATOMIC_HABITS_URL = "https://jamesclear.com/atomic-habits";
 
 export type AppLink = {
 	id: string;
