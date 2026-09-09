@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
 	CURRENT_VAULT_VERSION,
+	BREAKS_DIRNAME,
 	HABITS_DIRNAME,
 	IDENTITY_DIRNAME,
 	JOURNAL_DIRNAME,
@@ -53,6 +54,7 @@ export function ensureVaultLayout(vaultDir: string): VaultMeta {
 	fs.mkdirSync(path.join(vaultDir, HABITS_DIRNAME), { recursive: true });
 	fs.mkdirSync(path.join(vaultDir, JOURNAL_DIRNAME), { recursive: true });
 	fs.mkdirSync(path.join(vaultDir, IDENTITY_DIRNAME), { recursive: true });
+	fs.mkdirSync(path.join(vaultDir, BREAKS_DIRNAME), { recursive: true });
 
 	const filePath = metaPath(vaultDir);
 	if (!fs.existsSync(filePath)) {

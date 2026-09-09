@@ -31,7 +31,7 @@ Outlined Variable for icons (same self-hosted `@fontsource-variable` approach).
 - Do not build feature screens as Lit elements; compose `ds-*` primitives from Alpine markup instead
 - First-run flow: `welcome` → `setup` (vault folder) → `app`. Returning users with an open vault skip straight to `app` on Track.
 - **Settings** (sidebar): tabs for **UI** (theme + layout density), **Habits**
-  (daily reminder + archived habits/identities browse/restore), and **Vault** (path / move / open).
+  (daily reminder + archived habits/identities/breaks browse/restore), and **Vault** (path / move / open).
 - Default chrome is **compact** (0 radius, tight spacing) and **dark**. Prefs are stored per machine in
   `userData/config.json` as `uiDensity` (`compact` | `comfortable` | `roomy`),
   `uiTheme` (`dark` | `light` | `system`), and `dailyReminder` (boolean; once-per-day
@@ -48,6 +48,8 @@ Vault/
     morning-run-a1b2c3.json
   identity/
     writer-a1b2c3.json
+  breaks/
+    late-scrolling-a1b2c3.json
   journal/
 ```
 
@@ -55,7 +57,13 @@ Each habit is one JSON file under `habits/` (name, cue, note, schedule, completi
 optional archive metadata).
 Each identity is one JSON file under `identity/` (statement, note, linked habit ids,
 optional archive metadata).
+Each break is one JSON file under `breaks/` (bad-habit name, cue, note, color, four
+inversion laws, replacement habit ids, clean days, optional archive metadata).
 **Track** covers today’s list, month calendar, habit×day completion graph, and check-offs.
+Active breaks also appear on Track for the selected day so you can mark a clean day (resisted)
+alongside habit check-offs; unclean breaks count toward remaining.
+The habit graph lists breaks in a separate **Break** section under habits (clean = filled,
+unclean = missed strike).
 Add habits with **New habit**; edit with the **Edit** control beside each row.
 Click the habit card to complete it. **Remove** opens a dialog to archive (keeps graph
 history, optional note) or delete permanently. Browse and restore archived habits under
@@ -67,12 +75,18 @@ votes, today/this week, and recent evidence. Track groups today’s due list und
 identities (a whole stack stays in one group) and shows how many votes are still open.
 Archive identities from the remove dialog; restore under Settings → Habits.
 
+**Break** inverts the four laws to dismantle a bad habit: make it invisible, unattractive,
+difficult, and unsatisfying. Optionally link replacement habits. Mark clean days on Track or
+on the Break card checkbox; cards show streak, laws, and replacements. Archive or delete from
+Remove; restore under Settings → Habits.
+
 **Journal** is one or more markdown entries per day under
 `journal/YYYY-MM-DD-<hex>.json` (legacy `journal/YYYY-MM-DD.json` still loads).
 Pick a mood with the
 face row, write in a Notion-style live markdown editor (headings, lists, and emphasis style
-as you type), and tag habits inline with `#habit-slug` (autocomplete while typing). Entries
+as you type), and tag habits or breaks inline with `#slug` (autocomplete while typing). Entries
 autosave; blank days leave no file. Use **New entry** to add another page for the same day.
+**Delete entry** on an open entry removes it permanently (confirm dialog).
 
 Schedules: `daily`, `weekly` (weekdays + interval weeks, e.g. every other Monday), or
 `every_n_days`. Track only lists habits due on the selected day; streaks count consecutive

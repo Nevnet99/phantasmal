@@ -26,6 +26,7 @@ import { HABITS_DIRNAME } from "./schema";
 import { getOpenVault, writeJsonAtomic } from "./fs-vault";
 import { loadActiveIdentities } from "./identity";
 import { loadJournaledDays, listJournalSummariesForDay } from "./journal";
+import { listBreaks, loadBreaks } from "./breaks";
 
 function habitsDir(vaultPath: string): string {
 	return path.join(vaultPath, HABITS_DIRNAME);
@@ -184,6 +185,8 @@ export function getTrackSnapshot(query: TrackQuery): TrackSnapshot {
 				? query.selectedDay
 				: null;
 	const journalEntries = listJournalSummariesForDay(query.selectedDay);
+	const breakRecords = loadBreaks();
+	const breaks = listBreaks(query.selectedDay).breaks;
 	return buildTrackSnapshot(
 		loadHabits(),
 		query.selectedDay,
@@ -194,6 +197,8 @@ export function getTrackSnapshot(query: TrackQuery): TrackSnapshot {
 		journaledDays,
 		journalGraphSince,
 		journalEntries,
+		breaks,
+		breakRecords,
 	);
 }
 

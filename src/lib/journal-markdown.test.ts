@@ -6,6 +6,7 @@ import {
 	renderJournalMarkdown,
 	resolveHabitIdsFromBody,
 	stripHabitTagFromBody,
+	uniqueJournalTag,
 } from "./journal-markdown";
 
 describe("journal-markdown", () => {
@@ -14,6 +15,13 @@ describe("journal-markdown", () => {
 		expect(habitTagSlug("Learn a programming concept from book")).toBe(
 			"learn-a-programming-concept-from-book",
 		);
+	});
+
+	it("disambiguates colliding journal tags", () => {
+		const taken = new Set(["walk"]);
+		expect(uniqueJournalTag("walk", taken)).toBe("walk-break");
+		taken.add("walk-break");
+		expect(uniqueJournalTag("walk", taken)).toBe("walk-break-2");
 	});
 
 	it("extracts and resolves habit hashtags", () => {

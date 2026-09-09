@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { closeVault, openVaultAt } from "./fs-vault";
 import { createHabit, removeHabit } from "./habits";
+import { createBreak } from "./breaks";
 import {
 	getJournal,
 	listJournalSummariesForDay,
@@ -160,6 +161,25 @@ describe("journal vault", () => {
 		expect(entry.habits).toEqual([]);
 		expect(entry.body).not.toContain("#walk");
 		expect(entry.body).toContain("Went for a");
+	});
+
+	it("resolves break hashtags in journal entries", () => {
+		tempVault();
+		const item = createBreak({ name: "Late scrolling" }, "2026-09-09");
+		const saved = saveJournal({
+			day: "2026-09-09",
+			title: "Resisted",
+			body: "Skipped #late-scrolling tonight.",
+			mood: "good",
+		});
+		expect(saved.habitIds).toEqual([item.id]);
+		expect(saved.habits[0]?.kind).toBe("break");
+		expect(saved.habits[0]?.tag).toBe("late-scrolling");
+
+		const snap = getJournal("2026-09-09");
+		expect(
+			snap.habitOptions.some((option) => option.id === item.id && option.kind === "break"),
+		).toBe(true);
 	});
 
 	it("drops habit ids when hashtags are removed from the body", () => {

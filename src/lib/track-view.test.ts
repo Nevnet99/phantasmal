@@ -176,4 +176,91 @@ describe("track-view", () => {
 		expect(graph.rows[0]?.cells[5]?.state).toBe("off");
 		expect(graph.rows[0]?.cells[7]?.state).toBe("done");
 	});
+
+	it("adds a Break section under habits on the graph", () => {
+		const habits = [habit({ id: "a", name: "Run", completions: ["2026-09-08"] })];
+		const breaks = [
+			{
+				id: "scroll-1",
+				name: "Late scrolling",
+				cue: "",
+				note: "",
+				color: "#c45c26",
+				invisible: "",
+				unattractive: "",
+				difficult: "",
+				unsatisfying: "",
+				replacementHabitIds: [],
+				cleanDays: ["2026-09-07"],
+				archivedAt: null,
+				archiveNote: "",
+				createdAt: "2026-09-01T12:00:00.000Z",
+				updatedAt: "2026-09-08T12:00:00.000Z",
+			},
+		];
+		const graph = buildHabitGraph(habits, 2026, 9, "2026-09-08", "2026-09-08", null, null, breaks);
+		expect(graph.sections.map((section) => section.id)).toEqual(["habits", "breaks"]);
+		expect(graph.sections[1]?.title).toBe("Break");
+		expect(graph.rows.map((row) => row.kind)).toEqual(["habit", "break"]);
+		const breakRow = graph.rows[1];
+		const day7 = graph.days.findIndex((day) => day.day === "2026-09-07");
+		const day8 = graph.days.findIndex((day) => day.day === "2026-09-08");
+		expect(breakRow?.cells[day7]?.state).toBe("done");
+		expect(breakRow?.cells[day8]?.state).toBe("missed");
+		expect(breakRow?.streak).toBe(1);
+	});
+
+	it("counts unclean breaks toward remaining on Track", () => {
+		const habits = [
+			habit({
+				id: "a",
+				name: "A",
+				completions: ["2026-09-08"],
+			}),
+		];
+		const breaks = [
+			{
+				id: "scroll",
+				name: "Scrolling",
+				cue: "Bed",
+				note: "",
+				color: "#b85c4a",
+				invisible: "",
+				unattractive: "",
+				difficult: "",
+				unsatisfying: "",
+				replacementHabitIds: [],
+				replacementNames: [],
+				linkedLabel: "No replacement habit linked",
+				laws: [],
+				lawsFilled: 0,
+				lawsLabel: "No inversion plan yet",
+				cleanDays: [],
+				cleanToday: false,
+				streak: 0,
+				streakLabel: "0 clean days",
+				archived: false,
+				archivedAt: "",
+				archiveNote: "",
+				archivedLabel: "",
+			},
+		];
+		const snap = buildTrackSnapshot(
+			habits,
+			"2026-09-08",
+			9,
+			2026,
+			"2026-09-08",
+			[],
+			null,
+			null,
+			[],
+			breaks,
+		);
+		expect(snap.breaks).toHaveLength(1);
+		expect(snap.totalCount).toBe(2);
+		expect(snap.doneCount).toBe(1);
+		expect(snap.remainingCount).toBe(1);
+		expect(snap.summaryLabel).toBe("1 left");
+	});
 });

@@ -32,7 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
 		id: "break",
 		label: "Break",
 		blurb: "Invert the laws to make bad habits invisible, unattractive, hard, and unsatisfying.",
-		enabled: false,
+		enabled: true,
 	},
 	{
 		id: "journal",

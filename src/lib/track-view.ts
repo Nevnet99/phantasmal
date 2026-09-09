@@ -6,11 +6,13 @@ import type {
 	HabitGraphCell,
 	HabitGraphDay,
 	HabitGraphRow,
+	HabitGraphSection,
 	HabitRecord,
 	HabitView,
 	TrackSnapshot,
 } from "../shared/habits";
 import { JOURNAL_GRAPH_COLOR, JOURNAL_GRAPH_ID, JOURNAL_GRAPH_NAME } from "../shared/habits";
+import type { BreakRecord } from "../shared/break";
 import {
 	daysInMonth,
 	formatDayLabel,
@@ -18,6 +20,7 @@ import {
 	localDayKey,
 	mondayIndex,
 	shiftDayKey,
+	streakEndingOn,
 } from "./day";
 import { resolveHabitColor } from "./habit-color";
 import { isDueOn, scheduleLabel, streakOnSchedule } from "./schedule";
@@ -29,6 +32,7 @@ import {
 	stackDepth,
 } from "./stack";
 import { isHabitActiveOn, isHabitArchived } from "./habit-status";
+import { isBreakActiveOn } from "./break-view";
 import { buildTrackGroups, type IdentityLink } from "./track-groups";
 
 export function activityLevel(completed: number, total: number): ActivityLevel {
@@ -123,6 +127,7 @@ export function buildHabitGraph(
 	selectedDay: DayKey,
 	journaledDays: ReadonlySet<DayKey> | null = null,
 	journalGraphSince: DayKey | null = null,
+	breaks: BreakRecord[] = [],
 ): HabitGraph {
 	const days: HabitGraphDay[] = [];
 	const count = daysInMonth(year, month);
@@ -155,7 +160,7 @@ export function buildHabitGraph(
 		...archivedRelevant,
 	];
 
-	const rows: HabitGraphRow[] = rowHabits.map((habit) => {
+	const habitRows: HabitGraphRow[] = rowHabits.map((habit) => {
 		const completions = new Set(habit.completions);
 		const streak = streakOnSchedule(habit.completions, habit.schedule, selectedDay);
 		const cells: HabitGraphCell[] = dayKeys.map((day) => {
@@ -181,22 +186,82 @@ export function buildHabitGraph(
 			streak,
 			streakLabel: streak === 1 ? "Streak: 1 day" : `Streak: ${streak} days`,
 			cells,
+			kind: "habit",
 		};
 	});
 
+	const activeBreaks = breaks.filter((item) => !item.archivedAt);
+	const archivedBreaks = breaks.filter((item) => item.archivedAt);
+	const archivedBreaksRelevant = archivedBreaks
+		.filter((item) => dayKeys.some((day) => isBreakActiveOn(item, day)))
+		.sort((a, b) => a.name.localeCompare(b.name));
+	const rowBreaks: BreakRecord[] = [
+		...activeBreaks.sort((a, b) => a.name.localeCompare(b.name)),
+		...archivedBreaksRelevant,
+	];
+
+	const breakRows: HabitGraphRow[] = rowBreaks.map((item) => {
+		const clean = new Set(item.cleanDays);
+		const streak = streakEndingOn(item.cleanDays, selectedDay);
+		const cells: HabitGraphCell[] = dayKeys.map((day) => {
+			const due = isBreakActiveOn(item, day);
+			const done = clean.has(day);
+			const future = day > todayKey;
+			const state = !due || (future && !done) ? "off" : done ? "done" : "missed";
+			const status =
+				state === "done"
+					? "clean"
+					: state === "missed"
+						? "not clean"
+						: future
+							? "upcoming"
+							: "not tracking";
+			return {
+				key: `${item.id}-${day}`,
+				habitId: item.id,
+				day,
+				state,
+				done,
+				label: `${item.name} · ${formatDayLabel(day)} · ${status}`,
+			};
+		});
+		return {
+			habitId: item.id,
+			name: item.name,
+			color: resolveHabitColor(item.color, item.id),
+			streak,
+			streakLabel: streak === 1 ? "Streak: 1 day" : `Streak: ${streak} days`,
+			cells,
+			kind: "break",
+		};
+	});
+
+	const sections: HabitGraphSection[] = [];
+	const rows: HabitGraphRow[] = [];
+
 	if (journaledDays) {
-		rows.unshift(
-			buildJournalGraphRow(
-				dayKeys,
-				journaledDays,
-				todayKey,
-				selectedDay,
-				journalGraphSince ?? todayKey,
-			),
+		const journalRow = buildJournalGraphRow(
+			dayKeys,
+			journaledDays,
+			todayKey,
+			selectedDay,
+			journalGraphSince ?? todayKey,
 		);
+		sections.push({ id: "journal", title: "", rows: [journalRow] });
+		rows.push(journalRow);
 	}
 
-	return { days, rows };
+	if (habitRows.length > 0) {
+		sections.push({ id: "habits", title: "", rows: habitRows });
+		rows.push(...habitRows);
+	}
+
+	if (breakRows.length > 0) {
+		sections.push({ id: "breaks", title: "Break", rows: breakRows });
+		rows.push(...breakRows);
+	}
+
+	return { days, rows, sections };
 }
 
 function journalStreakFromSince(
@@ -247,6 +312,7 @@ function buildJournalGraphRow(
 		streak,
 		streakLabel: streak === 1 ? "Streak: 1 day" : `Streak: ${streak} days`,
 		cells,
+		kind: "journal",
 	};
 }
 
@@ -333,15 +399,20 @@ export function buildTrackSnapshot(
 	journaledDays: ReadonlySet<DayKey> | null = null,
 	journalGraphSince: DayKey | null = null,
 	journalEntries: TrackSnapshot["journalEntries"] = [],
+	breaks: TrackSnapshot["breaks"] = [],
+	breakRecords: BreakRecord[] = [],
 ): TrackSnapshot {
 	const views = orderByStack(toHabitViews(habits, selectedDay).filter((habit) => habit.due));
-	const remaining = views.filter((habit) => !habit.done);
-	const doneCount = views.length - remaining.length;
-	const totalCount = views.length;
-	const remainingCount = remaining.length;
+	const habitRemaining = views.filter((habit) => !habit.done).length;
+	const habitDone = views.length - habitRemaining;
+	const breakRemaining = breaks.filter((item) => !item.cleanToday).length;
+	const breakDone = breaks.length - breakRemaining;
+	const doneCount = habitDone + breakDone;
+	const totalCount = views.length + breaks.length;
+	const remainingCount = habitRemaining + breakRemaining;
 
 	let summaryLabel = "Nothing scheduled";
-	if (habits.length === 0 && !journaledDays) {
+	if (habits.length === 0 && breaks.length === 0 && !journaledDays) {
 		summaryLabel = "No habits yet";
 	} else if (totalCount > 0) {
 		if (remainingCount === 0) {
@@ -363,12 +434,12 @@ export function buildTrackSnapshot(
 		selectedLabel: formatDayLabel(selectedDay),
 		isSelectedToday: selectedDay === todayKey,
 		summaryLabel,
-		hasHabits: habits.length > 0 || Boolean(journaledDays),
+		hasHabits: habits.length > 0 || breaks.length > 0 || Boolean(journaledDays),
 		remainingCount,
 		doneCount,
 		totalCount,
 		habits: views,
-		remaining,
+		remaining: views.filter((habit) => !habit.done),
 		groups: buildTrackGroups(views, identities, selectedDay === todayKey),
 		habitGraph: buildHabitGraph(
 			habits,
@@ -378,6 +449,7 @@ export function buildTrackSnapshot(
 			selectedDay,
 			journaledDays,
 			journalGraphSince,
+			breakRecords,
 		),
 		weekdays: WEEKDAYS,
 		calendarMonthLabel: formatMonthLabel(year, month),
@@ -385,5 +457,6 @@ export function buildTrackSnapshot(
 		calendarMonth: month,
 		calendarCells: buildMonthCalendar(habits, year, month, todayKey, selectedDay),
 		journalEntries,
+		breaks,
 	};
 }
